@@ -1,0 +1,31 @@
+# System & Temporary
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+*.swp
+*.bak
+*~
+enhancer_from_line_*.js
+
+# Python venv
+.venv/
+venv/
+ENV/
+
+# Node & Build artifacts
+node_modules/
+dist/
+out/
+.vite/
+
+# Logs & Cache
+logs/
+cache/
+*.log
+
+# Large model binaries
+models/whisper/
+models/piper/
+models/sherpa-onnx*/
