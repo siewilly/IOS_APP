@@ -46,6 +46,19 @@
 
 ## 📜 版本更新紀錄 (Version History / Changelog)
 
+### [v1.5.0] - 2026-11-17
+- **100% 全透明網頁背景 (Transparent Web Background)**：
+  - 徹底移除 `html:not(.electron) body` 的暗紫色漸層背景，全站強制套用 `background: transparent !important` 與 `background-color: transparent !important`，無論在 Web 端或 Electron 穿透環境均呈現 100% 透明。
+- **預設預測左下角定位 (Default Bottom-Left Positioning)**：
+  - 在 `Character.model3.json` 原生佈局設定與前端掛載邏輯中將愛蜜莉雅預設初始座標配置於左下角（`Layout: { width: 1.05, x: -0.95, y: -0.52 }`），使桌寵自然依附在螢幕左下方，不阻擋中央工作視窗。
+  - 加入 `localStorage` 座標持久化機制（`emilia_pet_pos_x`, `emilia_pet_pos_y`），使用者自由拖動後即刻記憶，刷新或重啟自動還原最新位置。
+- **適中黃金桌寵比例 (Proportional Moderate Scaling)**：
+  - 修正原先 `Layout.width: 2.0` 疊加前端雙倍縮放導致角色過大、佔滿螢幕且超出視窗的異常問題。
+  - 將模型佈局寬度調校為 `1.05`，`model_dict.json` 的 `kScale` 設為 `0.26`，前端自適應換算為約 52% 視窗高度的最適桌寵比例。
+- **絲滑全域滑鼠自由拖曳 (Smooth Global Mouse Dragging)**：
+  - 重構 `useLive2DModel.ts` 拖曳架構，結合模型邊界距離近接判定（`isNearModel`），點擊角色軀幹或週邊均可 100% 靈敏抓取。
+  - 升級為全域 `document` Capture 級滑鼠移動與釋放監聽，徹底解決快速拖動時 React 容器失焦與掉落問題，拖曳反應極致絲滑穩定。
+
 ### [v1.4.0] - 2026-11-17
 - **徹底清除走路與移動功能 (原地陪伴模式)**：
   - 徹底清除 `emilia_biometric_enhancer.js` 中的漫步引擎、位移動畫、地圖導航、桌椅抱枕等動態道具生成及打瞌睡位移代碼（共清除逾 1,360 行移動邏輯與冗餘樣式）。
