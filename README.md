@@ -46,6 +46,17 @@
 
 ## 📜 版本更新紀錄 (Version History / Changelog)
 
+### [v1.6.0] - 2026-11-17
+- **網頁版與桌寵全面解耦獨立 (Decoupled Web and Pet Architecture)**：
+  - **模組化分工重構**：將過往混合於同一組件與全域 CSS 的架構徹底拆分為兩個獨立模組：
+    - `src/renderer/src/pet/`（`PetView.tsx` & `pet.css`）：純淨桌面寵物專屬，固定於 440x700 緊湊視窗、100% 透明無邊框、精準黃金立繪比例與原生視窗拖曳，完全不受網頁版樣式污染。
+    - `src/renderer/src/web/`（`WebView.tsx` & `web.css`）：大螢幕沉浸式網頁版專屬，完整保留左側功能面板（模型/TTS/Prompt/設定）、動態背景壁紙、沉浸式字幕區與底部輸入控制台，專供後續網頁端功能特別優化。
+  - **智慧情境路由切換**：
+    - Electron 桌面客戶端（或帶有 `?mode=pet` 參數）預設精準加載 `PetView`。
+    - 標準網頁瀏覽器造訪（`http://localhost:12393/` 或 `?mode=web`）預設自動加載 `WebView`。
+    - 側邊欄整合一鍵雙向切換選單（Web Mode / Pet Mode）。
+  - **全域 CSS 樣式隔離**：移除強制全域透明背景，透過 `pet-mode` 與 `web-mode` 獨立作用域，確保網頁版壁紙主題與桌寵透明穿透各自獨立運作。
+
 ### [v1.5.2] - 2026-11-17
 - **桌寵黃金比例精準校正 (Refined Proportions from User Reference)**：
   - 依照使用者提供的實機桌面截圖基準，徹底修復先前模型面部過度放大、比例跑掉的問題。
