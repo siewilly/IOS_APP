@@ -46,6 +46,17 @@
 
 ## 📜 版本更新紀錄 (Version History / Changelog)
 
+### [v1.5.1] - 2026-11-17
+- **獨立緊湊桌寵小視窗 (440x700 剛好裝下愛蜜莉雅)**：
+  - 徹底告別全螢幕大畫布，將桌寵前端改為 `440x700` 的精緻無邊框透明視窗，剛剛好完整容納愛蜜莉雅全身立繪與底部懸浮對話卡片。
+- **電腦桌面左下角預設定位 (Desktop Bottom-Left Anchor)**：
+  - 視窗啟動初始座標精準配置於電腦螢幕左下角（螢幕左側向內縮 40px、貼齊工作區底部上方），不遮擋桌面中央或右側主要工作區。
+  - 支援 `pet_bounds.json` 本機座標持久化，手動拖曳至任意位置後自動保存，重啟立刻復位。
+- **視窗級自由拖曳 (Native Window Dragging)**：
+  - 透過 Electron IPC (`pet-drag-start`, `pet-drag-move`, `pet-drag-end`) 實現視窗級拖曳，按住角色或視窗任意區域即可平滑拖動整個視窗至電腦桌面任何角落，甚至跨雙螢幕自由穿梭。
+- **模型完美居中與版面黃金適配**：
+  - 模型原生座標配置為水平正中心（`x: 0.0`），立繪由頭頂至下身黃金填滿視窗，底部對話輸入卡片貼底收斂（`bottom: 24px`，寬 400px），精緻不擁擠。
+
 ### [v1.5.0] - 2026-11-17
 - **100% 全透明網頁背景 (Transparent Web Background)**：
   - 徹底移除 `html:not(.electron) body` 的暗紫色漸層背景，全站強制套用 `background: transparent !important` 與 `background-color: transparent !important`，無論在 Web 端或 Electron 穿透環境均呈現 100% 透明。
