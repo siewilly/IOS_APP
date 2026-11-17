@@ -46,6 +46,15 @@
 
 ## 📜 版本更新紀錄 (Version History / Changelog)
 
+### [v1.7.2] - 2026-11-17
+- **暫時停用聲音接收功能與麥克風常駐監聽 (Temporarily Disable Audio Reception / Always-On Mic)**：
+  - **聲音接收功能安全關閉（Microphone & VAD Muted）**：
+    - 依指示全域設定 `AUDIO_INPUT_DISABLED = true`，徹底關閉前端常駐麥克風監聽與語音活動偵測（VAD）。
+    - 封鎖 `startMic` 與對話結束（`conversation-chain-end`）時的自動喚醒麥克風行為，徹底杜絕背景雜音誤觸或持續占用麥克風硬體。
+    - 網頁版輸入列麥克風按鈕切換為靜音狀態標籤（`BsMicMuteFill`），點擊時給予貼心 Toast 提示引導文字交流。
+  - **愛蜜莉雅語音說話功能 100% 完整保留（Emilia TTS Speech Fully Preserved）**：
+    - 嚴格隔離輸入端與輸出端：使用者透過文字輸入框或快捷氣泡發送訊息時，愛蜜莉雅依然能即時生成 Fish Audio 原聲語音、驅動平滑嘴形動畫、展現動態頻譜與雙語對話字幕。
+
 ### [v1.7.1] - 2026-11-17
 - **全端效能與流暢度深度優化 (Full-Stack Performance & Latency Optimization)**：
   - **前端 React 渲染效能升級（隔離狀態避免整頁高頻重繪）**：
