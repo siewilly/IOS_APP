@@ -46,6 +46,19 @@
 
 ## 📜 版本更新紀錄 (Version History / Changelog)
 
+### [v1.6.2] - 2026-11-17
+- **對話框放大與日文即時繁體中文對照 (Enlarged Dialogue Card & Real-Time Translation)**：
+  - **對話框大幅放大 (Generous Visual Area)**：
+    - 寬度擴充至 780px (`width: min(94vw, 780px)`)，內縮間距大幅增加至 `px: 20~28px, py: 16~20px`，升級為 24px 圓角半透明毛玻璃質感。
+    - 字體清晰度翻倍提升，主要中文翻譯採用 `18px ~ 21px` 大字體與 1.55 倍舒適行高，徹底告別手機或遠端觀看費力的問題。
+  - **日文即時自動翻譯為繁體中文 (Real-time Japanese to Traditional Chinese)**：
+    - 後端新增 `/api/translate` 極速翻譯 API 端點，結合 Groq 雲端推理與記憶體快取池（重複句 <1ms 極速秒回），專屬調校貼合《Re:0》愛蜜莉雅溫柔少女風格的台灣繁體中文翻譯。
+    - 前端雙軌即時翻譯管線：
+      1. 優先辨識與分離 LLM 自帶的括號中文翻譯。
+      2. 若收到純日語原聲，自動向 `/api/translate` 請求即時繁中翻譯。
+      3. 採用「**上層：清晰繁體中文翻譯（主要閱讀焦點）**」+「**下層：日文原句對照（保留動漫原汁原味）**」雙層架構，並標註 `中日即時雙語` 徽章。
+    - 桌面寵物端（`InputSubtitle`）同步實裝中日雙語自動解析與對照顯示。
+
 ### [v1.6.1] - 2026-11-17
 - **手機端網頁版頂級 UI 優化 (Mobile Web Responsive Optimization)**：
   - **角色絕對置中固定 (Strict Center Pinning)**：
