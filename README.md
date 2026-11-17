@@ -46,6 +46,14 @@
 
 ## 📜 版本更新紀錄 (Version History / Changelog)
 
+### [v1.6.4] - 2026-11-17
+- **桌面寵物端渲染穩定化與雙啟動腳本支援 (Desktop Pet Rendering Stabilization & Launchers)**：
+  - **React 渲染錯誤修復 (ReferenceError Fix)**：修復 `input-subtitle.tsx` 中遺漏引入的 `useRef`，恢復桌寵模式下 React 元件樹的穩定渲染與輸入對話框正常運作。
+  - **Live2D 高畫質視窗擷取支援 (`preserveDrawingBuffer: true`)**：在 WebGL 初始化時啟用 `preserveDrawingBuffer`，確保原生 Electron 視窗擷取（`webContents.capturePage()`）與 Canvas 離屏繪製能 100% 完整捕捉愛蜜莉雅精細立繪與透明背景。
+  - **雙啟動腳本支援與 npm 腳本整合**：
+    - 新增 `run_desktop_pet.sh` 軟連結指向 `run_pet.sh`，使用者無論執行 `./run_pet.sh` 或 `./run_desktop_pet.sh` 均可一鍵無縫喚醒桌面寵物。
+    - `package.json` 正式登錄 `"pet": "electron --no-sandbox pet-main.cjs"`，相容於 Linux 各種桌面環境直接啟動。
+
 ### [v1.6.3] - 2026-11-17
 - **工具選單頂級動漫毛玻璃重構 (Anime Glassmorphism Tool Menu & Console Deck Redesign)**：
   - **桌面寵物端靈動控制台 (`PetView` / `emilia_biometric_enhancer.js`)**：
