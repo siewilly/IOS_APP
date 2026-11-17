@@ -46,6 +46,25 @@
 
 ## 📜 版本更新紀錄 (Version History / Changelog)
 
+### [v1.7.0] - 2026-11-17
+- **網頁版對話框頂級動漫視覺昇華、日文主大字/中文副小字排版與說話順暢度大幅優化 (Web Dialogue UI Overhaul & Speech Smoothness System)**：
+  - **日文主體大字 × 繁體中文副字幕層次重構 (Japanese-First Dual-Language Hierarchy)**：
+    - **上方主要大字體 (Top Focus)**：愛蜜莉雅的原聲日文設為主要大字 (`20px ~ 23px`)，採用俐落高清晰度動漫字體族群 (`Hiragino Kaku Gothic ProN`, `Meiryo`, `Noto Sans JP`)，搭配 600 字重與柔和文字投影 (`text-shadow`)，完美還原日系視覺小說經典立體沉浸感。
+    - **下方優雅副字幕 (Bottom Subtitle)**：即時翻譯的繁體中文作為副標小字 (`14px ~ 15px`)，以淡紫丁香色調 (`purple.100`) 呈現在纖細的紫水晶毛玻璃分割線下方，附帶圓角 `[中文]` 標籤，層次分明且不喧賓奪主。
+  - **說話順暢度全面優化：物理阻尼嘴形平滑化 (Physically Damped Live2D Lip Sync)**：
+    - 徹底根除 Live2D 嘴形在 60 FPS 下因音訊瞬態 RMS 波動產生的劇烈抽搐抖動（震動式開閉問題）。
+    - 在 WebSDK `LAppModel` 底層引入**非對稱指數低通平滑濾波器 (Exponential LERP Low-Pass Filter)**：
+      - 起音 (Attack)：以高響應物理阻尼速率 (`20.0`) 迅速張口，跟隨發音音節。
+      - 釋音 (Decay)：以柔和漸收物理阻尼速率 (`12.0`) 平滑閉合，消除音節間急墜抽動。
+      - 門檻降噪 (Noise Floor Gate)：抑制底噪微抖，並將增益倍率由原本失真剪切的 `4.0` 修正為自然口型係數 `1.0`，呈現栩栩如生的高品質動漫語音口型銜接。
+  - **說話順暢度全面優化：打字機平滑推進流 (Progressive Typewriter Streaming)**：
+    - 語音回覆不再瞬間突兀全句跳出，改為隨說話節奏逐字流暢推進（每字 18~28ms 平滑湧現），並自帶呼吸脈衝打字光標 (`▌`)。
+    - 支援「點擊立即展開」機制（使用者點擊對話框即可立刻顯示全句，操作體驗如同視覺小說遊戲）。
+  - **動態 4-Bar 語音頻譜等化器 (Voice Soundwave Visualizer)**：
+    - 當愛蜜莉雅開口說話時，對話框頂部狀態列動態綻放 4 條上下起伏跳動的紫水晶光柱語音等化器 (`emilia-soundwave`)，隨語音律動起伏，提供立體直觀的對話生命力反饋。
+  - **即時翻譯平滑淡入滑上動效 (Smooth Subtitle Transition)**：
+    - 繁體中文翻譯生成後，採用 `@keyframes emiliaSubtitleSlideIn` 物理曲線柔和滑上淡入，消除文字瞬間突兀跳變。
+
 ### [v1.6.4] - 2026-11-17
 - **桌面寵物端渲染穩定化與雙啟動腳本支援 (Desktop Pet Rendering Stabilization & Launchers)**：
   - **React 渲染錯誤修復 (ReferenceError Fix)**：修復 `input-subtitle.tsx` 中遺漏引入的 `useRef`，恢復桌寵模式下 React 元件樹的穩定渲染與輸入對話框正常運作。
