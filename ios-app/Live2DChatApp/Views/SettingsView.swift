@@ -3,11 +3,14 @@ import SwiftUI
 public struct SettingsView: View {
     @ObservedObject public var configManager: ServerConfigManager
     @ObservedObject public var networkService: ChatNetworkService
+    @ObservedObject private var authService = AuthService.shared
     public var onReconnect: () -> Void
     @Environment(\.dismiss) private var dismiss
 
     @State private var serverInput: String = ""
     @State private var characterInput: String = ""
+    @State private var isAuthSheetPresented: Bool = false
+    @State private var authSheetMode: AuthViewMode = .login
 
     public init(
         configManager: ServerConfigManager,
@@ -22,6 +25,51 @@ public struct SettingsView: View {
     public var body: some View {
         NavigationView {
             Form {
+                Section(header: Text("伴侶帳號與身份 (Account & Profile)")) {
+                    if let user = authService.currentUser {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text(user.display_name)
+                                        .font(.headline)
+                                    Text("(@\(user.username))")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                Text("稱呼愛蜜莉雅：\(user.emilia_callname)")
+                                    .font(.caption)
+                                    .foregroundColor(.purple)
+                            }
+                            Spacer()
+                            Button("編輯資料") {
+                                authSheetMode = .profile
+                                isAuthSheetPresented = true
+                            }
+                            .buttonStyle(.bordered)
+                        }
+
+                        Button(role: .destructive, action: {
+                            authService.logout()
+                            onReconnect()
+                        }) {
+                            Text("登出此帳號")
+                        }
+                    } else {
+                        HStack {
+                            Text("尚未登入帳號")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Button("登入 / 註冊") {
+                                authSheetMode = .login
+                                isAuthSheetPresented = true
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(Color(red: 0.55, green: 0.35, blue: 0.85))
+                        }
+                    }
+                }
+
                 Section(header: Text("伺服器連線設定 (Cloudflare / 本地端)")) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("後端伺服器網址 (HTTP / HTTPS)")
@@ -118,6 +166,11 @@ public struct SettingsView: View {
             .onAppear {
                 serverInput = configManager.serverBaseURL
                 characterInput = configManager.characterName
+            }
+            .sheet(isPresented: $isAuthSheetPresented) {
+                AuthSheetView(mode: authSheetMode) {
+                    onReconnect()
+                }
             }
         }
     }

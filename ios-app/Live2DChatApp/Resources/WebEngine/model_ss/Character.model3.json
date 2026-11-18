@@ -1,0 +1,342 @@
+{
+  "Version": 3,
+  "FileReferences": {
+    "Moc": "Character.moc3",
+    "Textures": [
+      "textures/texture_00.png"
+    ],
+    "Physics": "Character.physics3.json",
+    "Motions": {
+      "Idle": [
+        {
+          "File": "motions/00_Wait_Idle_Clean.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        }
+      ],
+      "Talk": [
+        {
+          "File": "motions/00_Navi_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        },
+        {
+          "File": "motions/00_Navi_02.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        },
+        {
+          "File": "motions/00_Happy_02.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        },
+        {
+          "File": "motions/00_Appeal_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        }
+      ],
+      "Happy": [
+        {
+          "File": "motions/00_Happy_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        },
+        {
+          "File": "motions/00_Happy_02.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        },
+        {
+          "File": "motions/bound.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        }
+      ],
+      "Shy": [
+        {
+          "File": "motions/00_Shame_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        }
+      ],
+      "Surprise": [
+        {
+          "File": "motions/00_Surprise_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        },
+        {
+          "File": "motions/bound_double.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        }
+      ],
+      "Thinking": [
+        {
+          "File": "motions/00_Puzzle_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        },
+        {
+          "File": "motions/00_Puzzle_02.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        },
+        {
+          "File": "motions/00_Doubt_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        }
+      ],
+      "Angry": [
+        {
+          "File": "motions/00_Anger_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        },
+        {
+          "File": "motions/00_Anger_02.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        },
+        {
+          "File": "motions/00_Anger_03.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        }
+      ],
+      "Sad": [
+        {
+          "File": "motions/00_Sad_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        },
+        {
+          "File": "motions/00_Cry_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        },
+        {
+          "File": "motions/00_Upset_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        }
+      ],
+      "Pride": [
+        {
+          "File": "motions/00_Pride_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        }
+      ],
+      "Serious": [
+        {
+          "File": "motions/00_Serious_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        }
+      ],
+      "Appeal": [
+        {
+          "File": "motions/00_Appeal_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        }
+      ],
+      "TapHead": [
+        {
+          "File": "motions/00_Happy_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        },
+        {
+          "File": "motions/00_Shame_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        },
+        {
+          "File": "motions/00_Surprise_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        },
+        {
+          "File": "motions/00_Appeal_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        }
+      ],
+      "TapBody": [
+        {
+          "File": "motions/00_Pride_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        },
+        {
+          "File": "motions/00_Happy_02.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        },
+        {
+          "File": "motions/00_Navi_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        },
+        {
+          "File": "motions/00_Anger_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        },
+        {
+          "File": "motions/00_Doubt_01.motion3.json",
+          "FadeInTime": 0.5,
+          "FadeOutTime": 0.5
+        }
+      ],
+      "ShySmile": [
+        {
+          "File": "motions/00_ShySmile_01.motion3.json",
+          "FadeInTime": 0.4,
+          "FadeOutTime": 0.6
+        }
+      ]
+    },
+    "Expressions": [
+      {
+        "Name": "exp_00_neutral",
+        "File": "expressions/exp_00_neutral.exp3.json"
+      },
+      {
+        "Name": "exp_01_subtle_smile",
+        "File": "expressions/exp_01_subtle_smile.exp3.json"
+      },
+      {
+        "Name": "exp_02_happy_big",
+        "File": "expressions/exp_02_happy_big.exp3.json"
+      },
+      {
+        "Name": "exp_03_wink",
+        "File": "expressions/exp_03_wink.exp3.json"
+      },
+      {
+        "Name": "exp_04_smug",
+        "File": "expressions/exp_04_smug.exp3.json"
+      },
+      {
+        "Name": "exp_05_shy",
+        "File": "expressions/exp_05_shy.exp3.json"
+      },
+      {
+        "Name": "exp_06_blushing_heavy",
+        "File": "expressions/exp_06_blushing_heavy.exp3.json"
+      },
+      {
+        "Name": "exp_07_pout",
+        "File": "expressions/exp_07_pout.exp3.json"
+      },
+      {
+        "Name": "exp_08_jitome",
+        "File": "expressions/exp_08_jitome.exp3.json"
+      },
+      {
+        "Name": "exp_09_thinking",
+        "File": "expressions/exp_09_thinking.exp3.json"
+      },
+      {
+        "Name": "exp_10_surprise",
+        "File": "expressions/exp_10_surprise.exp3.json"
+      },
+      {
+        "Name": "exp_11_shocked",
+        "File": "expressions/exp_11_shocked.exp3.json"
+      },
+      {
+        "Name": "exp_12_angry",
+        "File": "expressions/exp_12_angry.exp3.json"
+      },
+      {
+        "Name": "exp_13_serious",
+        "File": "expressions/exp_13_serious.exp3.json"
+      },
+      {
+        "Name": "exp_14_sad",
+        "File": "expressions/exp_14_sad.exp3.json"
+      },
+      {
+        "Name": "exp_15_crying",
+        "File": "expressions/exp_15_crying.exp3.json"
+      },
+      {
+        "Name": "exp_16_disgust",
+        "File": "expressions/exp_16_disgust.exp3.json"
+      },
+      {
+        "Name": "exp_17_embarrassed_sweat",
+        "File": "expressions/exp_17_embarrassed_sweat.exp3.json"
+      },
+      {
+        "Name": "exp_18_panic_dizzy",
+        "File": "expressions/exp_18_panic_dizzy.exp3.json"
+      },
+      {
+        "Name": "exp_19_tears_streaming",
+        "File": "expressions/exp_19_tears_streaming.exp3.json"
+      },
+      {
+        "Name": "exp_20_dark_ominous",
+        "File": "expressions/exp_20_dark_ominous.exp3.json"
+      },
+      {
+        "Name": "exp_21_adoration_sparkle",
+        "File": "expressions/exp_21_adoration_sparkle.exp3.json"
+      },
+      {
+        "Name": "exp_22_sleepy_yawn",
+        "File": "expressions/exp_22_sleepy_yawn.exp3.json"
+      },
+      {
+        "Name": "exp_23_tsundere_blush",
+        "File": "expressions/exp_23_tsundere_blush.exp3.json"
+      }
+    ]
+  },
+  "Groups": [
+    {
+      "Target": "Parameter",
+      "Name": "EyeBlink",
+      "Ids": [
+        "PARAM_EYE_R_OPEN",
+        "PARAM_EYE_L_OPEN"
+      ]
+    },
+    {
+      "Target": "Parameter",
+      "Name": "LipSync",
+      "Ids": [
+        "PARAM_MOUTH_OPEN_Y"
+      ]
+    },
+    {
+      "Target": "Parameter",
+      "Name": "Tracking",
+      "Ids": [
+        "PARAM_ANGLE_X",
+        "PARAM_ANGLE_Y",
+        "PARAM_ANGLE_Z",
+        "PARAM_BODY_ANGLE_X",
+        "PARAM_EYE_BALL_X",
+        "PARAM_EYE_BALL_Y"
+      ]
+    }
+  ],
+  "HitAreas": [
+    {
+      "Id": "PartHead",
+      "Name": "HitAreaHead"
+    },
+    {
+      "Id": "PartUpperBody",
+      "Name": "HitAreaBody"
+    }
+  ]
+}

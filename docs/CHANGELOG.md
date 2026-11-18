@@ -2,6 +2,40 @@
 
 > 精簡版請見根目錄 [README.md](../README.md#-版本紀錄摘要)。
 
+### [v2.4.0] - 2026-11-18
+- **多使用者帳號機制與獨立記憶隔離體系 (`Multi-User Accounts & Isolated Memory Segregation`)**：
+  - **1. SQLite WAL 高併發資料庫與帳號安全鑑權 (`database/db_manager.py` & `server.py`)**：
+    - **結構化資料表**：建立 `cache/emilia_companion.db`，啟用 Write-Ahead Logging (WAL) 模式與執行緒安全連線。包含 `users`（儲存 `id`, `username`, `password_hash`, `salt`, `display_name`, `emilia_callname`, `created_at`, `updated_at`）與 `companion_states`（儲存 `id`, `user_id`, `character_conf_uid`, `state_json`, `updated_at`）。
+    - **強密碼雜湊與 PyJWT 授權**：採用標準函式庫 `hashlib.pbkdf2_hmac`（SHA-256，100,000 輪疊代）搭配 32 位元安全 Salt；簽發 PyJWT Token（7 天效期），無額外外部依賴。
+    - **RESTful 帳號端點**：新增 `/api/auth/register`（註冊新帳號，帳號限英文/數字/底線）、`/api/auth/login`（登入核發權杖）、`/api/auth/me`（取得當前登入者與伴侶狀態）與 `/api/auth/profile`（更新暱稱、愛蜜莉雅稱謂與密碼）。
+  - **2. 歷史資料平滑自動遷移 (`Legacy Data Seamless Migration`)**：
+    - 系統初次啟動時自動檢測既有單機資料，若資料庫為空，自動建立預設使用者（`username: siewilly`，密碼：`backey513`，初始暱稱：`有栖`，稱謂：`愛蜜莉雅`）。
+    - 自動讀取 `cache/companion_state.json` 將既有 270 分好感度、心情、客製愛稱與冒險日記遷移至該帳號；將 `cache/memories/emilia_4star_001_memory.json` 複製為 `cache/memories/u_1_emilia_4star_001_memory.json`，實現無感過渡與零資料遺失。
+  - **3. 長期記憶與會話歷史物理隔離 (`LocalMemorySystem` & `ChatHistoryManager`)**：
+    - **記憶物理分立**：`LocalMemorySystem` 支援 `user_id`，路徑依據使用者獨立路由為 `cache/memories/u_{user_id}_{conf_uid}_memory.json`，不同使用者間記憶完全隔離。
+    - **記憶核心演算法 100% 保持**：倒排索引 (`_inverted_index`)、CJK 2/3-gram 切分、Jaccard 82% 相似度 ＋ 18% 時間衰減、LRU 2000 快取容量與 2 秒防抖非同步刷寫規則維持不變。
+    - **聊天記錄分立**：`ChatHistoryManager` 將歷史路徑路由至 `chat_history/u_{user_id}/{conf_uid}/`，不同使用者在同一造型下的歷史紀錄彼此獨立。
+    - **好感度與狀態分立**：各使用者擁有獨立的好感度等級、情緒向量、觸控反應、專屬愛稱、Q&A 答案與專屬冒險日記。
+  - **4. WebSocket 認證與會話動態複製隔離 (`websocket_handler.py` & `routes.py`)**：
+    - `/client-ws` 支援 URL Query 參數 `?token=<jwt_token>` 以及連線內發送 `{"type": "auth", "token": "..."}` 雙軌認證。
+    - 未認證客戶端連線時收到 `auth-required` 提示，強制要求登入；成功認證後回傳 `auth-success` 與該使用者之伴侶資料。
+    - **會話隔離**：連線時深拷貝獨立 `BasicMemoryAgent` 實例，各連線各自管理獨立的短宣上下文與記憶實例，杜絕多使用者在線時的記憶串音問題。
+  - **5. 跨端登入與專屬個人資料設定頁面 (`Open-LLM-VTuber-Web`)**：
+    - **AuthService 與 AuthContext**：前端建立單例服務管理 JWT Token、本地儲存與全域事件通知（`emilia-auth-switch`）。
+    - **動漫毛玻璃登入彈窗 (`AuthModal.tsx`)**：支援登入與註冊無縫切換、英文帳號格式校驗、預設帳號一鍵填入按鈕，登入後自動更新連線並拉取狀態。
+    - **專屬伴侶個人設定頁面 (`UserProfileModal.tsx`)**：提供隨時修改暱稱、修改稱呼愛蜜莉雅的方式、更新密碼、好感度等級徽章橫幅與登出切換按鈕。
+    - **頂部 HUD 身份膠囊**：桌寵端與網頁端頂部 HUD 實裝 `👤 [暱稱]` 身份標籤，點擊直接呼出個人資料設定頁面；`WebToolMenu` 最頂部亦新增「👤 伴侶身份與個人設定」入口。
+    - **生物引擎自動切換 (`emilia_biometric_enhancer.js`)**：請求 API 時自動附加 Bearer 標頭，監聽 `emilia-auth-switch` 事件時強制以伺服器端該使用者的好感度與狀態覆寫本地狀態。
+  - **6. iOS 端認證與設定頁面實裝 (`ios-app`)**：
+    - **AuthService.swift**：實裝異步登入、註冊、個人資料更新與 UserDefaults Token 持久化。
+    - **ServerConfigManager & ChatNetworkService**：WebSocket URL 自動附加 `?token=`，並支援處理 `auth-required` 與 `auth-success` 訊號。
+    - **AuthSheetView.swift**：實裝 SwiftUI 登入/註冊/個人設定整合視圖，包含預設帳號一鍵填入與毛玻璃玻璃動漫視覺風格。
+    - **ContentView & SettingsView**：頂部導航列顯示使用者身份膠囊，SettingsView 最頂部提供「帳號與身份」專區，支援隨時查看好感度稱謂、編輯資料與登出切換。
+  - **7. 本地安全密碼急救腳本 (`reset_user_password.sh`)**：
+    - 新增可執行 shell 腳本 `./reset_user_password.sh <username> <new_password>`，便於使用者或管理員於忘記密碼時在本機終端一秒安全重設密碼。
+  - **8. 全鏈路自動化測試與驗證**：
+    - 撰寫自動化端對端測試腳本驗證：`siewilly` 登入、伴侶狀態 270 分讀取、新使用者 `rem` 註冊與狀態更新至 60 分、驗證 `siewilly` 狀態未受污染（完全隔離）、WebSocket 拒絕無 Token 連線、Token 動態驗證、Query Token 直連驗證，以及長期記憶路徑分立，全數 100% 通過。
+
 ### [v2.3.0] - 2026-11-18
 - **網頁版與桌寵全功能深度同步 (`Web & Desktop Pet Full Parity & Synchronization`)**：
   - **1. 桌寵頂部 HUD 工具列 (`.emilia-top-bar`)**：桌寵端（PetView）全面同步網頁版頂部懸浮 HUD，包含選單抽屜按鈕 (`FiMenu`)、連線狀態綠點燈號、台灣即時天氣膠囊（點擊一鍵朗讀今日晨間簡報）、音樂熱舞狀態徽章（點擊暫停/播放、點擊輪替 6 種舞步）、一鍵換裝 (`BsStars`)、說話中徽章，以及對話框顯隱開關 (`LuEye` / `LuEyeOff`)。

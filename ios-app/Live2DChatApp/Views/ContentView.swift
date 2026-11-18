@@ -5,10 +5,12 @@ public struct ContentView: View {
     @StateObject private var networkService = ChatNetworkService.shared
     @StateObject private var lipSyncManager = NativeAudioLipSyncManager.shared
     @StateObject private var bridgeController = Live2DBridgeController()
+    @ObservedObject private var authService = AuthService.shared
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var inputText: String = ""
     @State private var isSettingsPresented: Bool = false
+    @State private var isAuthPresented: Bool = false
     @State private var touchToastText: String? = nil
     @State private var toastDismissTask: Task<Void, Never>? = nil
     @FocusState private var isInputFocused: Bool
@@ -93,9 +95,18 @@ public struct ContentView: View {
                 }
             )
         }
+        .sheet(isPresented: $isAuthPresented) {
+            AuthSheetView(mode: authService.isAuthenticated ? .profile : .login) {
+                reconnectServer()
+            }
+        }
         .onAppear {
             setupServices()
-            reconnectServer()
+            if !authService.isAuthenticated {
+                isAuthPresented = true
+            } else {
+                reconnectServer()
+            }
         }
         .onChange(of: scenePhase) { newPhase in
             handleScenePhaseChange(newPhase)
@@ -141,6 +152,26 @@ public struct ContentView: View {
             }
 
             Spacer()
+
+            // User Profile / Auth Button
+            Button(action: {
+                isAuthPresented = true
+            }) {
+                HStack(spacing: 5) {
+                    Image(systemName: "person.crop.circle.fill")
+                        .font(.system(size: 13))
+                    Text(authService.currentUser?.display_name ?? "登入")
+                        .font(.system(size: 12, weight: .medium))
+                        .lineLimit(1)
+                }
+                .foregroundColor(.white.opacity(0.9))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.black.opacity(0.45))
+                .clipShape(Capsule())
+                .overlay(Circle().stroke(Color.clear, lineWidth: 0))
+                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+            }
 
             // Text-only Mode Toggle Button
             Button(action: {
@@ -295,6 +326,10 @@ public struct ContentView: View {
             Task { @MainActor in
                 lipSyncManager?.stopAll()
             }
+        }
+
+        networkService.onAuthRequired = { [self] in
+            isAuthPresented = true
         }
 
         bridgeController.onTouchReaction = { [self] area, text in

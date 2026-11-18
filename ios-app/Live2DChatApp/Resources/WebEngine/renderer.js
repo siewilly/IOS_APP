@@ -230,6 +230,34 @@
     }
   }
 
+  let currentOutfit = 'classic';
+
+  async function switchOutfit(outfitId) {
+    if (outfitId === currentOutfit && live2dModel) return;
+    const modelPath = outfitId === 'swimsuit' ? 'model_ss/Character.model3.json' : 'model/Character.model3.json';
+
+    try {
+      console.log('[Live2D WebEngine] Switching outfit to:', outfitId, modelPath);
+      const newModel = await PIXI.live2d.Live2DModel.from(modelPath, { autoInteract: false });
+
+      if (live2dModel) {
+        app.stage.removeChild(live2dModel);
+        try { live2dModel.destroy({ children: true }); } catch (e) {}
+      }
+
+      live2dModel = newModel;
+      app.stage.addChild(live2dModel);
+      window.__model = live2dModel;
+      currentOutfit = outfitId;
+
+      layoutModel();
+      wakeToActiveFPS(3.0);
+      console.log('[Live2D WebEngine] Outfit switched successfully to:', outfitId);
+    } catch (err) {
+      console.error('[Live2D WebEngine] Failed to switch outfit:', err);
+    }
+  }
+
   function setPaused(isPaused) {
     if (isPaused) {
       if (app && app.ticker && app.ticker.started) {
@@ -251,6 +279,8 @@
     setExpression,
     setPaused,
     setFPSMode: applyFPSMode,
+    switchOutfit,
+    getCurrentOutfit: () => currentOutfit,
     isReady: () => !!live2dModel,
     getActiveFPS: () => app.ticker.maxFPS,
   };

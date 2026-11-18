@@ -8,12 +8,14 @@ public final class ChatNetworkService: NSObject, ObservableObject, URLSessionWeb
     @Published public var connectionStatusText: String = "未連線"
     @Published public var messages: [ChatMessage] = []
     @Published public var isAiThinkingOrSpeaking: Bool = false
+    @Published public var isAuthRequired: Bool = false
 
     // Event hooks for audio playback and Live2D triggers
     public var onAudioReceived: ((Data, ServerDisplayText?, ServerAction?) -> Void)?
     public var onExpression: ((String) -> Void)?
     public var onMotion: ((String) -> Void)?
     public var onInterrupt: (() -> Void)?
+    public var onAuthRequired: (() -> Void)?
 
     private var webSocketTask: URLSessionWebSocketTask?
     private var session: URLSession?
@@ -109,6 +111,10 @@ public final class ChatNetworkService: NSObject, ObservableObject, URLSessionWeb
         sendJSON(["type": "create-new-history"])
     }
 
+    public func sendAuth(token: String) {
+        sendJSON(["type": "auth", "token": token])
+    }
+
     private func sendJSON(_ dict: [String: Any]) {
         guard let data = try? JSONSerialization.data(withJSONObject: dict),
               let string = String(data: data, encoding: .utf8) else {
@@ -160,6 +166,17 @@ public final class ChatNetworkService: NSObject, ObservableObject, URLSessionWeb
 
         DispatchQueue.main.async {
             switch type {
+            case "auth-required":
+                self.isAuthRequired = true
+                self.connectionStatusText = "需要登入帳號"
+                self.onAuthRequired?()
+
+            case "auth-success":
+                self.isAuthRequired = false
+                self.isConnected = true
+                self.connectionStatusText = "已連線"
+                self.sendHandshake()
+
             case "full-text":
                 if let msgText = json["text"] as? String {
                     if msgText.contains("Connection established") {

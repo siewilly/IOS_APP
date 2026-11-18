@@ -90,6 +90,15 @@ public final class ServerConfigManager: ObservableObject {
             trimmed += "/client-ws"
         }
 
+        // Attach authentication JWT token if present
+        if let token = AuthService.shared.token, !token.isEmpty {
+            if trimmed.contains("?") {
+                trimmed += "&token=\(token)"
+            } else {
+                trimmed += "?token=\(token)"
+            }
+        }
+
         return URL(string: trimmed)
     }
 

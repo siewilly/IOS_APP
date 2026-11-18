@@ -40,6 +40,12 @@ public final class Live2DBridgeController: ObservableObject {
         let script = "if (window.Live2DBridge && window.Live2DBridge.setFPSMode) { window.Live2DBridge.setFPSMode(\(is60FPS)); }"
         webView?.evaluateJavaScript(script, completionHandler: nil)
     }
+
+    /// Switch character outfit ('classic' or 'swimsuit')
+    public func switchOutfit(_ outfitId: String) {
+        let script = "if (window.Live2DBridge && window.Live2DBridge.switchOutfit) { window.Live2DBridge.switchOutfit('\(outfitId)'); }"
+        webView?.evaluateJavaScript(script, completionHandler: nil)
+    }
 }
 
 public struct Live2DWebView: UIViewRepresentable {

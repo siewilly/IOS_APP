@@ -2,7 +2,7 @@
 
 > 原汁原味《Re:從零開始的異世界生活》愛蜜莉雅桌面伴侶。融合官方 Live2D 渲染、微表情生物模擬引擎、Fish Audio 高橋李依聲線、Groq 秒級容錯大模型池、零 Token 螢幕視覺感知、Omni-Net 聯網中樞、跨裝置 Soul-Link 同步、Discord 連動與音樂旋律編舞系統。
 
-**目前版本：v2.3.0**（2026-11-18）｜完整更新歷程見 [docs/CHANGELOG.md](docs/CHANGELOG.md)
+**目前版本：v2.4.0**（2026-11-18）｜完整更新歷程見 [docs/CHANGELOG.md](docs/CHANGELOG.md)
 
 ---
 
@@ -65,6 +65,19 @@
 - **1024-FFT 旋律追蹤**：主旋律音高 → 仰首／低頭，低頻瞬態與 BPM → 節拍，人聲頻譜 → 跟唱嘴型。
 - **六段式編舞**：💃 偶像重拍彈跳／🎶 旋律追隨＋雙手波浪／✨ 8 字立體律動／🌸 副歌躍動轉身／⭐ 側步花式打拍／🌙 夢幻華爾滋，可自動輪替或一鍵「🔀 換舞步」。
 - **點唱機 UI**：網頁端搜尋框、專輯封面、當前曲目與舞步徽章。
+
+### 👥 多使用者帳號與獨立記憶隔離 (Multi-User & Isolated Memory)
+- **SQLite 獨立資料庫 (`cache/emilia_companion.db`)**：採用 WAL 高併發模式，具備 `users` 與 `companion_states` 結構化資料表，密碼經 PBKDF2-HMAC-SHA256（100,000 輪疊代）加密，簽發標準 PyJWT 鑑權權杖。
+- **預設帳號與平滑遷移**：自動將既有單機 `cache/companion_state.json` 與歷史記憶無縫遷移至預設管理員帳號（`username: siewilly`，密碼：`backey513`，預設暱稱：`有栖`，保留好感度 270 分與所有日記）。
+- **記憶與歷史物理隔離**：
+  - **長期記憶**：路由至 `cache/memories/u_{user_id}_{conf_uid}_memory.json`，不同使用者擁有完全獨立的記憶存儲，但檢索演算法（倒排索引、CJK 2/3-gram、Jaccard 82% ＋ 時間衰減 18%、LRU 2000、2s 防抖刷寫）保持 100% 一致。
+  - **聊天歷史**：路由至 `chat_history/u_{user_id}/{conf_uid}/`，徹底杜絕跨使用者會話記錄混淆。
+  - **伴侶好感度與狀態**：好感度分數、情緒（PAD）、客製化稱謂、冒險日記、約會回憶與 Q&A 答案各使用者完全分立。
+  - **WebSocket 會話隔離**：連線時深拷貝獨立 `BasicMemoryAgent` 實例，各客戶端互不干擾。
+- **跨平台登入與資料設定 UI**：
+  - **Web 與桌寵 (Electron)**：高顏值動漫毛玻璃 `AuthModal`（強制登入、英文帳號驗證、預設一鍵填入）與 `UserProfileModal`（隨時調整稱謂、暱稱、修改密碼、好感度等級卡片、登出）；頂部 HUD 顯示 `👤 {暱稱}` 身份膠囊。
+  - **iOS 端 (`ios-app`)**：Swift 原生 `AuthService`、`AuthSheetView`（登入/註冊/個人資料設定）、頂部導航膠囊與 `SettingsView` 帳號切換整合。
+- **本地密碼急救腳本**：提供 CLI 工具 `./reset_user_password.sh <username> <new_password>`，可在本機終端直接重設任意使用者密碼。
 
 ### 🔗 連線與同步
 - **跨裝置 Soul-Link**：`/api/companion-state` 原子合併好感度、愛稱、日記、音樂狀態至 `cache/companion_state.json`（以 `updatedAt` 判斷新舊），桌寵／網頁／Discord 共用。
@@ -182,15 +195,20 @@ Live2D_pet/
 
 | 端點 | 用途 |
 |---|---|
+| `POST /api/auth/register` | 註冊新使用者（英文帳號、自訂暱稱與愛蜜莉雅稱謂） |
+| `POST /api/auth/login` | 使用者登入，核發 JWT Token |
+| `GET /api/auth/me` | 驗證 Token 並取得當前使用者資訊與伴侶狀態 |
+| `PUT /api/auth/profile` | 編輯使用者基本資料（暱稱、愛蜜莉雅稱謂、密碼） |
 | `GET /api/capture-screen` | 螢幕感知（僅限本機／區網，外網回 403） |
 | `GET /api/desktop-status` | 閒置時間、運行應用、焦點視窗 |
 | `POST /api/translate` | 日→繁中翻譯（AsyncOpenAI＋LRU） |
-| `GET/POST /api/companion-state` | Soul-Link 同步 |
+| `GET/POST /api/companion-state` | Soul-Link 同步（依 Bearer Token 自動隔離存取各使用者專屬伴侶狀態） |
 | `GET /api/network-info` | 區網 IP／Tunnel 網址 |
 | `GET /api/internet-briefing` | 晨間簡報與天氣 |
 | `GET /api/music-search`、`/api/music-stream` | 全網搜歌與同源串流代理 |
 | `POST /api/generate-diary` | 日記／情書生成 |
 | `GET/POST /api/discord-config` | Discord Bot 設定與啟停 |
+| `/client-ws` | 雙向即時對話 WebSocket（支援 `?token=` 與 `auth` 訊息驗證） |
 | `/web-tool`、`/live2d-models/info`、`POST /asr` | 原生 Open-LLM-VTuber 路由 |
 
 ---
@@ -208,7 +226,17 @@ Live2D_pet/
 
 > 詳細內容請見 [docs/CHANGELOG.md](docs/CHANGELOG.md)。
 
-### [v2.3.0] - 2026-11-18（本次更新）
+### [v2.4.0] - 2026-11-18（本次更新）
+- **多使用者帳號機制與獨立記憶隔離 (`Multi-User Accounts & Isolated Memory Segregation`)**：
+  - **SQLite 資料庫持久化 (`cache/emilia_companion.db`)**：採用 WAL 模式，管理 `users` 與 `companion_states`，PBKDF2-HMAC-SHA256 安全雜湊與 PyJWT 授權驗證。
+  - **預設管理員與歷史資料自動平滑遷移**：開箱即用 `username: siewilly`，初始密碼 `backey513`，暱稱 `有栖`，無縫繼承既有 270 分好感度與 467 條長期記憶。
+  - **記憶與歷史物理隔離**：各使用者長期記憶路徑獨立（`cache/memories/u_{user_id}_{conf_uid}_memory.json`），檢索演算法與規則維持一致（倒排索引、CJK 2/3-gram、Jaccard 82% ＋ 時間衰減 18%、LRU 2000）；對話歷史分立（`chat_history/u_{user_id}/{conf_uid}/`）；各使用者好感度、心情、愛稱與冒險日記各自獨立。
+  - **全介面登入／註冊／個人資料管理**：
+    - Web 網頁與 Electron 桌寵：玻璃擬態動漫登入彈窗 (`AuthModal`)、個人資料設定頁 (`UserProfileModal`) 與頂部 HUD 身份膠囊。
+    - iOS App 端：原生 `AuthService`、`AuthSheetView` 與 `SettingsView` 帳號切換。
+  - **本地密碼急救 CLI**：提供 `./reset_user_password.sh <username> <new_password>` 秒級重設密碼工具。
+
+### [v2.3.0] - 2026-11-18
 - **網頁版與桌寵全功能深度同步**：
   - **桌寵頂部 HUD 工具列**：全面同步網頁版頂部懸浮 HUD（抽屜選單 `FiMenu`、連線狀態綠點燈號、台灣即時天氣膠囊、線上點歌與六段式動態編舞指示器、一鍵換裝 `BsStars`、語音狀態燈、對話框開關 `LuEye`）。
   - **旗艦級中日雙語對話卡片模組化**：抽取共用 `EmiliaDialogueCard`，桌寵端與網頁端均具備日文大字＋繁中副標滑入動畫、打字機推進（點擊秒展開）、4-Bar 動態音訊等化器頻譜、狀態徽章與 440px 緊湊視窗黃金比例適配。
@@ -229,6 +257,7 @@ Live2D_pet/
 
 | 版本 | 重點 |
 |---|---|
+| v2.4.0 | 多使用者帳號體系、SQLite 資料庫、記憶與好感度物理隔離、全介面登入／個人資料設定 |
 | v2.3.0 | 網頁版與桌寵全功能深度同步、統一頂部 HUD、中日雙語對話卡片、靈動工具抽屜 |
 | v2.1.0 | 全網音樂串流點播、1024-FFT 旋律追蹤、六段式編舞、線上點唱機 |
 | v2.0.0 | Omni-Net 聯網中樞、Soul-Link／PWA／QR、Discord Bot、多聲部合成器節奏熱舞 |
