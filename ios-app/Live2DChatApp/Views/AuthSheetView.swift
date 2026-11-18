@@ -387,13 +387,22 @@ public struct AuthSheetView: View {
                     await MainActor.run {
                         isLoading = false
                         newPassword = ""
-                        successMessage = "資料已成功更新！"
+                        successMessage = "伴侶資料已成功儲存！"
                         onAuthCompleted?()
+                    }
+                    try? await Task.sleep(nanoseconds: 1_200_000_000)
+                    await MainActor.run {
+                        dismiss()
                     }
                 } catch {
                     await MainActor.run {
                         isLoading = false
-                        errorMessage = error.localizedDescription
+                        let desc = error.localizedDescription
+                        if desc.contains("-1011") || desc.contains("badServerResponse") {
+                            errorMessage = "伺服器驗證處理中，請稍候重試或重新整理連線。"
+                        } else {
+                            errorMessage = desc
+                        }
                     }
                 }
             }

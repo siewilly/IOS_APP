@@ -173,11 +173,7 @@ public struct ContentView: View {
         }
         .onAppear {
             setupServices()
-            if !authService.isAuthenticated {
-                isAuthPresented = true
-            } else {
-                reconnectServer()
-            }
+            reconnectServer()
         }
         .onChange(of: scenePhase) { newPhase in
             handleScenePhaseChange(newPhase)
@@ -570,7 +566,10 @@ public struct ContentView: View {
 
         networkService.onAuthRequired = {
             Task { @MainActor in
-                isAuthPresented = true
+                await authService.autoLogin()
+                if let tok = authService.token {
+                    networkService.sendAuth(token: tok)
+                }
             }
         }
 
@@ -638,6 +637,9 @@ public struct ContentView: View {
         case .active:
             if !configManager.isTextOnlyMode {
                 bridgeController.setPaused(false)
+            }
+            if !networkService.isConnected {
+                reconnectServer()
             }
         @unknown default:
             break

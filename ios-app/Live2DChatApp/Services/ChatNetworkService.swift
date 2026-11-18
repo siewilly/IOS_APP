@@ -21,6 +21,19 @@ public final class ChatNetworkService: NSObject, ObservableObject, URLSessionWeb
     private var session: URLSession?
     private var pingTimer: Timer?
     private var currentURL: URL?
+    private var reconnectWorkItem: DispatchWorkItem?
+
+    public func scheduleReconnect() {
+        guard !isConnected else { return }
+        reconnectWorkItem?.cancel()
+        let item = DispatchWorkItem { [weak self] in
+            guard let self = self, !self.isConnected, let url = self.currentURL else { return }
+            print("[ChatNetworkService] Auto-reconnecting to: \(url.absoluteString)")
+            self.connect(url: url)
+        }
+        reconnectWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: item)
+    }
 
     public override init() {
         super.init()
@@ -40,6 +53,7 @@ public final class ChatNetworkService: NSObject, ObservableObject, URLSessionWeb
         }
 
         disconnect()
+        reconnectWorkItem?.cancel()
         self.currentURL = url
 
         DispatchQueue.main.async {
@@ -146,6 +160,7 @@ public final class ChatNetworkService: NSObject, ObservableObject, URLSessionWeb
                     self.isConnected = false
                     self.connectionStatusText = "連線異常中斷"
                     self.isAiThinkingOrSpeaking = false
+                    self.scheduleReconnect()
                 }
             case .success(let message):
                 switch message {
@@ -176,14 +191,28 @@ public final class ChatNetworkService: NSObject, ObservableObject, URLSessionWeb
             switch type {
             case "auth-required":
                 self.isAuthRequired = true
-                self.connectionStatusText = "需要登入帳號"
-                self.onAuthRequired?()
+                Task {
+                    await AuthService.shared.autoLogin()
+                    if let tok = AuthService.shared.token {
+                        self.sendAuth(token: tok)
+                    }
+                }
 
             case "auth-success":
                 self.isAuthRequired = false
                 self.isConnected = true
                 self.connectionStatusText = "已連線"
                 self.sendHandshake()
+                if let userDict = json["user"] as? [String: Any],
+                   let id = userDict["id"] as? Int,
+                   let uname = userDict["username"] as? String {
+                    let dName = userDict["display_name"] as? String ?? uname
+                    let cName = userDict["emilia_callname"] as? String ?? ""
+                    AuthService.shared.currentUser = UserProfile(id: id, username: uname, display_name: dName, emilia_callname: cName)
+                }
+                if let state = json["companion_state"] as? [String: Any] {
+                    CompanionSyncService.shared.applyState(state)
+                }
 
             case "full-text":
                 if let msgText = json["text"] as? String {
@@ -309,6 +338,7 @@ public final class ChatNetworkService: NSObject, ObservableObject, URLSessionWeb
             self.isConnected = false
             self.connectionStatusText = "連線已關閉"
             self.isAiThinkingOrSpeaking = false
+            self.scheduleReconnect()
         }
     }
 }

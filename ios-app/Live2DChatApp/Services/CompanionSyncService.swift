@@ -226,7 +226,7 @@ public final class CompanionSyncService: ObservableObject {
 
     // MARK: - Apply State Dictionary
     @MainActor
-    private func applyState(_ state: [String: Any]) {
+    public func applyState(_ state: [String: Any]) {
         if let score = state["intimacyScore"] as? Int {
             self.intimacyScore = score
         }
