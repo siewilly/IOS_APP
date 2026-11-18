@@ -46,6 +46,27 @@
 
 ## 📜 版本更新紀錄 (Version History / Changelog)
 
+### [v2.1.0] - 2026-11-18
+- **全網音樂串流點播與音訊頻譜旋律多維度動態編舞系統 (`Online Music Stream & Multi-Dimensional Melody Rhythm Choreography`)**：
+  - **1. 後端全網極速音樂搜尋與同源串流代理 (`internet_hub.py` / `server.py`)**：
+    - **全網搜歌中樞 (`search_online_music`)**：整合 Apple iTunes Search API (JP/TW 區域並行，350ms 極速官方 256kbps AAC 音源) 與 SoundCloud 備援檢索，自動提取標題、藝人、300×300 官方高畫質專輯封面與即時串流路徑。
+    - **同源代理串流與本機快取 (`/api/music-stream` & `/api/music-search`)**：由後端代理轉發音訊並附加 `Access-Control-Allow-Origin: *` 標頭與 SHA1 磁碟快取 (`cache/music/`)，杜絕跨網域 CORS Tainting 導致 WebAudio `AnalyserNode` 頻譜數值全為 0 的限制。
+    - **自然語言點歌意圖解析 (`extract_song_query` / `detect_music_command`)**：支援「愛蜜莉雅，幫我上網找 YOASOBI 的 Idol 來播」、「播放 周杰倫 晴天」、「我想聽 LiSA 的紅蓮華」、「放首輕快的日文歌」等各類口語表達，精準萃取曲目關鍵字並生成 `[bgm:play:{query}]` / `[motion:happy]` 控制標籤。
+  - **2. 前端 1024-FFT 旋律音高動態追蹤與人聲跟唱嘴型 (`emilia_biometric_enhancer.js`)**：
+    - 前端新增 `<audio id="emilia-online-audio">` 與 WebAudio `MediaElementAudioSourceNode` 串接，結合 1024-FFT 頻譜質心主旋律音高即時分析 (`smoothedMelodyPitch`)、重低音瞬態節奏 (Onset Transient) 與節奏 BPM 計算。
+    - 飆高音時自然仰首挺胸 (`PARAM_ANGLE_Y`, `PARAM_BODY_ANGLE_Y`)、低音時溫柔低頭垂眸，並依據人聲頻譜即時驅動跟唱閉合嘴型 (`PARAM_MOUTH_OPEN_Y`)。
+  - **3. 六段式多維度動態編舞狀態機 (徹底告別單一 Z 軸左右搖擺)**：
+    - 實裝 6 種不同動態風格的立體編舞模式，依歌曲副歌與節拍自動或手動輪替：
+      1. `💃 偶像重拍彈跳`：強勁低音垂直彈跳 (`PARAM_POSITION_Y`, `PARAM_STRETCH`) 與輕快踩點打拍。
+      2. `🎶 旋律音高追隨＋雙手波浪`：主旋律音高仰首挺胸，雙臂雙手柔美波浪起伏 (`PARAM_ARM_L/R_ROTATE`, `PARAM_HAND_L/R_ROTATE`)。
+      3. `✨ 8字立體律動`：3D 空間立體 8 字軀幹與頭部律動軌跡 (`PARAM_ANGLE_X/Y/Z`, `PARAM_BODY_ANGLE_X/Y`)。
+      4. `🌸 副歌躍動轉身顧盼`：高潮副歌躍動轉身、回眸含情脈脈凝視互動。
+      5. `⭐ 側步花式打拍`：左右踏步位移 (`PARAM_POSITION_X`)、輕盈雙肩聳動與活潑踩點。
+      6. `🌙 夢幻華爾滋`：優美大圓周軀幹傾斜、雙臂環抱與秀髮裙擺物理微風飄拂。
+  - **4. 網頁端線上點唱機與即時熱舞控制台升級 (`WebToolMenu.tsx` / `WebView.tsx`)**：
+    - 「🎵 線上搜歌與旋律熱舞點唱機」新增即時線上搜尋輸入框、專輯封面卡片、當前播放曲目、線上搜尋推薦結果與一鍵「🔀 換舞步」切換鈕。
+    - 頂部導航列動態顯示當前線上播放歌曲標題與舞步徽章，底部快捷膠囊無縫升級為真實在線歌曲點播。
+
 ### [v2.0.0] - 2026-11-18
 - **Omni-Net 全套聯網架構、Discord 機器人連動與點歌全身節奏熱舞系統實裝 (`Omni-Net & Soul-Link + DC Bot + Rhythm Dance`)**：
   - **1. 後端聯網智慧中樞 (`Open-LLM-VTuber/src/open_llm_vtuber/utils/internet_hub.py` & `basic_memory_agent.py`)**：
