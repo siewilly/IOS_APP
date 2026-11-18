@@ -46,6 +46,20 @@
 
 ## 📜 版本更新紀錄 (Version History / Changelog)
 
+### [v1.10.0] - 2026-11-18
+- **桌寵「接續歷史聊天」功能與統一造型記憶池實裝 (`Chat History Continuity`)**：
+  - **1. 統一愛蜜莉雅造型記憶池與歷史紀錄合併 (`characters/emilia_4star*.yaml` / `chat_history/`)**：
+    - 將經典大衣、夏日泳裝、GPT-120B、LLaMA-70B 等角色設定檔的 `conf_uid` 全面統一為 `emilia_4star_001`，並合併既有的過往對話 JSON 檔案至同一記憶池。
+  - **2. 後端換裝無縫延續記憶與空白歷史檔保護 (`service_context.py` / `chat_history_manager.py` / `websocket_handler.py`)**：
+    - `ServiceContext.handle_config_switch` 換裝重建 Agent 後，自動保留 `self.history_uid` 並呼叫 `set_memory_from_history` 載入當前對話上下文；同步更新 `init_agent` 以支援新角色識別碼。
+    - `get_history_list` 新增 `active_history_uid` 保護參數，避免啟動新建的空白對話在使用者尚未發言前開啟歷史清單時被誤刪。
+  - **3. 前端歷史狀態橋接與單句字幕同步 (`websocket-handler.tsx`)**：
+    - 修正 `config-switched` 與 `history-list` 事件處理：換裝時不再強制發送 `create-new-history` 或覆蓋現有對話，維持極簡單句字幕狀態；載入歷史對話（`history-data`）時自動擷取最後一則愛蜜莉雅回覆顯示於桌寵底部字幕框並同步展開。
+    - 建立 `window.emiliaHistoryBridge` 與 `emilia-history-update` 事件通道，支援清單更新、切換接續、開啟全新對話與刪除歷史紀錄。
+  - **4. 紫水晶「靈動控制台」歷史對話接續面板 (`emilia_biometric_enhancer.js`)**：
+    - 於右上角紫水晶「愛蜜莉雅 · 靈動控制台」新增「💬 歷史對話接續」專屬按鈕（底部對話卡片維持純淨）。
+    - 實作毛玻璃記憶庫彈窗（`openChatHistoryModal`），支援格式化時間、清洗標籤之最後對話預覽、當前對話標記、`➕ 開啟全新對話`、單擊接續過往聊天以及 `🗑️` 刪除紀錄，完整適配 440×700 透明桌寵滑鼠互動與點擊穿透保護。
+
 ### [v1.9.1] - 2026-11-18
 - **智慧桌面觀察系統重構與視覺意圖感知升級 (`Smart Desktop Observation System`)**：
   - **1. 本機 OS 狀態與遮罩分塊視覺引擎 (`capture_screen.py` / `server.py`)**：
