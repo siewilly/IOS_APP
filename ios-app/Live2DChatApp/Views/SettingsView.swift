@@ -86,7 +86,12 @@ public struct SettingsView: View {
                     }
                 }
 
-                Section(header: Text("電源與效能優化")) {
+                Section(header: Text("幀率與效能控制")) {
+                    Toggle("60 FPS 極致流暢模式", isOn: $configManager.is60FPSMode)
+                    Text(configManager.is60FPSMode ? "已啟用 60 FPS 滿血渲染，肢體動態、呼吸與語音嘴型極致絲滑。" : "已啟用 30/15 FPS 動態節能降頻，平衡耗電與發熱。")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
                     Toggle("極致省電 / 純文字模式", isOn: $configManager.isTextOnlyMode)
                     Text("開啟後將隱藏並凍結 Live2D 畫布與 WebGL 渲染管線，只保留原生文字對話，達到零 GPU 消耗。")
                         .font(.caption)
@@ -94,7 +99,7 @@ public struct SettingsView: View {
                 }
 
                 Section(header: Text("架構說明")) {
-                    Text("• 畫面渲染：本地 WKWebView 專責 Live2D，強制鎖定 12~30 FPS、解析度倍率 1x。\n• 網路音訊：原生 Swift URLSession 與 AVAudioPlayer 硬體解碼。\n• 嘴型同步：原生 CADisplayLink 即時讀取振幅轉換 ParamMouthOpenY。")
+                    Text("• 畫面渲染：本地 WKWebView 專責 Live2D，原生 3× Retina 物理像素滿血渲染。\n• 幀率控制：支援 60 FPS 絲滑模式與 30/15 FPS 節能模式自由切換。\n• 網路音訊：原生 Swift URLSession 與 AVAudioPlayer 硬體解碼。\n• 嘴型同步：原生 CADisplayLink 即時讀取振幅轉換 ParamMouthOpenY。")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

@@ -103,6 +103,14 @@ public struct ContentView: View {
         .onChange(of: configManager.isTextOnlyMode) { isTextOnly in
             bridgeController.setPaused(isTextOnly)
         }
+        .onChange(of: configManager.is60FPSMode) { is60FPS in
+            bridgeController.setFPSMode(is60FPS)
+        }
+        .onChange(of: bridgeController.isEngineReady) { isReady in
+            if isReady {
+                bridgeController.setFPSMode(configManager.is60FPSMode)
+            }
+        }
     }
 
     // MARK: - Top Navigation Bar

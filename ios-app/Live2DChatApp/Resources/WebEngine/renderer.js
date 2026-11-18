@@ -30,23 +30,41 @@
     height: window.innerHeight || 844,
   });
 
-  // 2. Dynamic frame rate throttling: 15 FPS idle vs 30 FPS active (smooth & responsive)
-  const IDLE_FPS = 15;
-  const ACTIVE_FPS = 30;
-  app.ticker.maxFPS = IDLE_FPS;
+  // 2. Framerate Management (60 FPS fluid mode vs 30/15 FPS battery saver)
+  let is60FPSMode = true; // Default to 60 FPS full fluidity
+  let IDLE_FPS = 60;
+  let ACTIVE_FPS = 60;
+  app.ticker.maxFPS = 60;
 
   let boostTimer = null;
   let currentMouthOpen = 0;
   let isSpeaking = false;
   let live2dModel = null;
 
+  function applyFPSMode(enabled) {
+    is60FPSMode = !!enabled;
+    if (is60FPSMode) {
+      IDLE_FPS = 60;
+      ACTIVE_FPS = 60;
+      app.ticker.maxFPS = 60;
+    } else {
+      IDLE_FPS = 15;
+      ACTIVE_FPS = 30;
+      app.ticker.maxFPS = IDLE_FPS;
+    }
+    console.log('[Live2D WebEngine] FPS mode updated. is60FPS:', is60FPSMode, 'targetFPS:', app.ticker.maxFPS);
+  }
+
   function wakeToActiveFPS(durationSeconds = 2.5) {
+    if (is60FPSMode) {
+      app.ticker.maxFPS = 60;
+      return;
+    }
     app.ticker.maxFPS = ACTIVE_FPS;
     if (boostTimer) {
       clearTimeout(boostTimer);
     }
     boostTimer = setTimeout(() => {
-      // Revert to 12 FPS only if speaking has ceased
       if (!isSpeaking && currentMouthOpen <= 0.01) {
         app.ticker.maxFPS = IDLE_FPS;
       }
@@ -232,6 +250,7 @@
     triggerMotion,
     setExpression,
     setPaused,
+    setFPSMode: applyFPSMode,
     isReady: () => !!live2dModel,
     getActiveFPS: () => app.ticker.maxFPS,
   };

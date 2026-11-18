@@ -34,6 +34,12 @@ public final class Live2DBridgeController: ObservableObject {
         let script = "if (window.Live2DBridge) { window.Live2DBridge.setPaused(\(isPaused)); }"
         webView?.evaluateJavaScript(script, completionHandler: nil)
     }
+
+    /// Set 60 FPS full fluidity mode vs 30/15 FPS battery saver mode
+    public func setFPSMode(_ is60FPS: Bool) {
+        let script = "if (window.Live2DBridge && window.Live2DBridge.setFPSMode) { window.Live2DBridge.setFPSMode(\(is60FPS)); }"
+        webView?.evaluateJavaScript(script, completionHandler: nil)
+    }
 }
 
 public struct Live2DWebView: UIViewRepresentable {

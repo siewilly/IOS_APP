@@ -8,6 +8,7 @@ public final class ServerConfigManager: ObservableObject {
         static let serverBaseURL = "server_base_url"
         static let characterName = "character_name"
         static let isTextOnlyMode = "is_text_only_mode"
+        static let is60FPSMode = "is_60fps_mode"
         static let recentServers = "recent_server_urls"
     }
 
@@ -30,6 +31,12 @@ public final class ServerConfigManager: ObservableObject {
         }
     }
 
+    @Published public var is60FPSMode: Bool {
+        didSet {
+            UserDefaults.standard.set(is60FPSMode, forKey: Keys.is60FPSMode)
+        }
+    }
+
     @Published public var recentServers: [String] {
         didSet {
             UserDefaults.standard.set(recentServers, forKey: Keys.recentServers)
@@ -40,6 +47,7 @@ public final class ServerConfigManager: ObservableObject {
         let savedURL = UserDefaults.standard.string(forKey: Keys.serverBaseURL) ?? "http://192.168.1.103:12393"
         let savedName = UserDefaults.standard.string(forKey: Keys.characterName) ?? "愛蜜莉雅 (Emilia)"
         let savedMode = UserDefaults.standard.bool(forKey: Keys.isTextOnlyMode)
+        let saved60FPS = UserDefaults.standard.object(forKey: Keys.is60FPSMode) as? Bool ?? true
         let savedRecents = UserDefaults.standard.stringArray(forKey: Keys.recentServers) ?? [
             "http://192.168.1.103:12393",
             "http://127.0.0.1:12393",
@@ -49,6 +57,7 @@ public final class ServerConfigManager: ObservableObject {
         self.serverBaseURL = savedURL
         self.characterName = savedName
         self.isTextOnlyMode = savedMode
+        self.is60FPSMode = saved60FPS
         self.recentServers = savedRecents
     }
 
