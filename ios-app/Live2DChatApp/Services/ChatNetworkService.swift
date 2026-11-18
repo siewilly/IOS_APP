@@ -11,7 +11,7 @@ public final class ChatNetworkService: NSObject, ObservableObject, URLSessionWeb
     @Published public var isAuthRequired: Bool = false
 
     // Event hooks for audio playback and Live2D triggers
-    public var onAudioReceived: ((Data, ServerDisplayText?, ServerAction?) -> Void)?
+    public var onAudioReceived: ((Data, ServerDisplayText?, ServerAction?, String?, String?, String?) -> Void)?
     public var onExpression: ((String) -> Void)?
     public var onMotion: ((String) -> Void)?
     public var onInterrupt: (() -> Void)?
@@ -262,35 +262,191 @@ public final class ChatNetworkService: NSObject, ObservableObject, URLSessionWeb
         }
     }
 
+    public struct ParsedTags {
+        public let motionGroup: String?
+        public let expressionName: String?
+        public let cleanText: String
+    }
+
+    public static func parseTags(from text: String) -> ParsedTags {
+        var motionGroup: String? = nil
+        var expressionName: String? = nil
+
+        // 1. Extract motion tag: [motion:xxx]
+        if let regex = try? NSRegularExpression(pattern: "\\[motion:([a-zA-Z0-9_-]+)\\]", options: .caseInsensitive) {
+            let nsStr = text as NSString
+            if let match = regex.firstMatch(in: text, options: [], range: NSRange(location: 0, length: nsStr.length)) {
+                let tag = nsStr.substring(with: match.range(at: 1)).lowercased()
+                motionGroup = mapMotionTagToGroup(tag)
+            }
+        }
+
+        // 2. Extract expression tag: [smile], [shy], [pout], [thinking], [joy], etc.
+        if let regex = try? NSRegularExpression(pattern: "\\[([a-zA-Z0-9_-]+)\\]", options: .caseInsensitive) {
+            let nsStr = text as NSString
+            let matches = regex.matches(in: text, options: [], range: NSRange(location: 0, length: nsStr.length))
+            for m in matches {
+                let tag = nsStr.substring(with: m.range(at: 1)).lowercased()
+                if !tag.hasPrefix("motion:") {
+                    if let exp = mapExpressionTag(tag) {
+                        expressionName = exp
+                        break
+                    }
+                }
+            }
+        }
+
+        // If motionGroup is not set, derive from expression
+        if motionGroup == nil, let exp = expressionName {
+            motionGroup = mapExpressionToMotion(exp)
+        }
+
+        // 3. Clean all bracket tags like [motion:talk], [smile], [shy], etc.
+        let clean = text.replacingOccurrences(of: "\\[[a-zA-Z0-9_:-]+\\]", with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return ParsedTags(motionGroup: motionGroup, expressionName: expressionName, cleanText: clean)
+    }
+
+    public static func mapMotionTagToGroup(_ tag: String) -> String {
+        let t = tag.lowercased()
+        if t.contains("jump") || t.contains("跳") {
+            return "Happy"
+        } else if t.contains("appeal") || t.contains("撒嬌") || t.contains("love") || t.contains("adoration") {
+            return "Appeal"
+        } else if t.contains("shysmile") || t.contains("嬌羞") {
+            return "ShySmile"
+        } else if t.contains("shy") || t.contains("害羞") || t.contains("blush") || t.contains("shame") {
+            return "Shy"
+        } else if t.contains("think") || t.contains("思考") || t.contains("puzzle") || t.contains("doubt") {
+            return "Thinking"
+        } else if t.contains("pout") || t.contains("angry") || t.contains("氣惱") || t.contains("anger") {
+            return "Angry"
+        } else if t.contains("pride") || t.contains("自豪") || t.contains("smug") {
+            return "Pride"
+        } else if t.contains("serious") || t.contains("嚴肅") || t.contains("認真") {
+            return "Serious"
+        } else if t.contains("sad") || t.contains("哀傷") || t.contains("cry") || t.contains("tears") || t.contains("upset") {
+            return "Sad"
+        } else if t.contains("surprise") || t.contains("shock") || t.contains("驚") {
+            return "Surprise"
+        } else if t.contains("happy") || t.contains("joy") || t.contains("smile") || t.contains("雀躍") {
+            return "Happy"
+        } else if t.contains("idle") || t.contains("wait") || t.contains("待機") {
+            return "Idle"
+        } else {
+            return "Talk"
+        }
+    }
+
+    public static func mapExpressionTag(_ tag: String) -> String? {
+        let t = tag.lowercased()
+        if t.contains("smile") || t.contains("笑") {
+            return "exp_01_subtle_smile"
+        } else if t.contains("joy") || t.contains("happy") || t.contains("開懷") || t.contains("大笑") {
+            return "exp_02_happy_big"
+        } else if t.contains("wink") || t.contains("眨眼") {
+            return "exp_03_wink"
+        } else if t.contains("smug") || t.contains("pride") || t.contains("得意") || t.contains("自豪") {
+            return "exp_04_smug"
+        } else if t.contains("blush") || t.contains("臉紅") {
+            return "exp_06_blushing_heavy"
+        } else if t.contains("shy") || t.contains("害羞") {
+            return "exp_05_shy"
+        } else if t.contains("pout") || t.contains("鼓嘴") || t.contains("嘟嘴") {
+            return "exp_07_pout"
+        } else if t.contains("jitome") || t.contains("白眼") || t.contains("鄙視") {
+            return "exp_08_jitome"
+        } else if t.contains("think") || t.contains("思考") || t.contains("puzzle") {
+            return "exp_09_thinking"
+        } else if t.contains("shock") || t.contains("震驚") {
+            return "exp_11_shocked"
+        } else if t.contains("surprise") || t.contains("驚奇") || t.contains("吃驚") {
+            return "exp_10_surprise"
+        } else if t.contains("cry") || t.contains("哭") || t.contains("流淚") {
+            return "exp_12_cry"
+        } else if t.contains("sad") || t.contains("難過") || t.contains("傷心") {
+            return "exp_14_sad"
+        } else if t.contains("angry") || t.contains("anger") || t.contains("生氣") {
+            return "exp_15_angry"
+        } else if t.contains("serious") || t.contains("嚴肅") {
+            return "exp_17_serious"
+        } else if t.contains("love") || t.contains("adoration") || t.contains("愛慕") {
+            return "exp_21_adoration_sparkle"
+        } else if t.contains("tsundere") || t.contains("傲嬌") {
+            return "exp_23_tsundere_blush"
+        } else if t.contains("neutral") || t.contains("idle") || t.contains("平靜") {
+            return "exp_00_neutral"
+        }
+        return nil
+    }
+
+    public static func mapExpressionToMotion(_ exp: String) -> String {
+        switch exp {
+        case "exp_02_happy_big":
+            return "Happy"
+        case "exp_04_smug":
+            return "Pride"
+        case "exp_05_shy", "exp_06_blushing_heavy", "exp_23_tsundere_blush":
+            return "Shy"
+        case "exp_07_pout", "exp_15_angry":
+            return "Angry"
+        case "exp_09_thinking":
+            return "Thinking"
+        case "exp_10_surprise", "exp_11_shocked":
+            return "Surprise"
+        case "exp_12_cry", "exp_14_sad":
+            return "Sad"
+        case "exp_17_serious":
+            return "Serious"
+        case "exp_21_adoration_sparkle":
+            return "Appeal"
+        default:
+            return "Talk"
+        }
+    }
+
     private func handleAudioMessage(json: [String: Any], rawData: Data) {
         // Decode ServerAudioPayload
         guard let payload = try? JSONDecoder().decode(ServerAudioPayload.self, from: rawData) else {
             return
         }
 
-        // 1. Text display update
+        var motionGroup: String? = nil
+        var expressionName: String? = nil
+        var cleanedText: String = ""
+
+        // 1. Text display & tag extraction
         if let displayText = payload.display_text, let text = displayText.text, !text.isEmpty {
+            let tags = ChatNetworkService.parseTags(from: text)
+            motionGroup = tags.motionGroup
+            expressionName = tags.expressionName
+            cleanedText = tags.cleanText
+
             let aiName = displayText.name ?? "愛蜜莉雅"
-            // Append or update message
-            let aiMessage = ChatMessage(sender: .ai, text: text, name: aiName)
+            // Append clean human-readable message without raw bracket tags
+            let textToShow = cleanedText.isEmpty ? text : cleanedText
+            let aiMessage = ChatMessage(sender: .ai, text: textToShow, name: aiName)
             self.messages.append(aiMessage)
         }
 
-        // 2. Action triggers (expressions & motions)
+        // 2. Action triggers fallback (expressions & motions)
         if let actions = payload.actions {
-            if let expressions = actions.expressions, let firstExp = expressions.first {
+            if let expressions = actions.expressions, let firstExp = expressions.first, expressionName == nil {
+                expressionName = firstExp
                 self.onExpression?(firstExp)
             }
-            if let motions = actions.motions, let firstMotion = motions.first {
+            if let motions = actions.motions, let firstMotion = motions.first, motionGroup == nil {
+                motionGroup = firstMotion
                 self.onMotion?(firstMotion)
             }
         }
 
-        // 3. Audio decoding for native lip sync
+        // 3. Audio decoding for native lip sync & motion orchestration
         if let base64Audio = payload.audio,
            let audioBytes = Data(base64Encoded: base64Audio) {
             self.isAiThinkingOrSpeaking = true
-            self.onAudioReceived?(audioBytes, payload.display_text, payload.actions)
+            self.onAudioReceived?(audioBytes, payload.display_text, payload.actions, motionGroup, expressionName, cleanedText)
         }
     }
 

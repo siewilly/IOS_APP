@@ -12,6 +12,11 @@
           "File": "motions/00_Wait_Idle_Clean.motion3.json",
           "FadeInTime": 0.5,
           "FadeOutTime": 0.5
+        },
+        {
+          "File": "motions/00_Wait_01.motion3.json",
+          "FadeInTime": 0.8,
+          "FadeOutTime": 0.8
         }
       ],
       "Talk": [

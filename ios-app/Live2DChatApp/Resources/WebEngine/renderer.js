@@ -361,14 +361,19 @@
       isPointerActive = false;
     });
 
-    // 5. Lip-sync synchronization hook
-    // Override mouth open parameter on every rendered tick
-    app.ticker.add(() => {
+    // 5. Lip-sync synchronization & dynamic breathing hook
+    let breathPhase = 0;
+    app.ticker.add((delta) => {
       if (!live2dModel || !live2dModel.internalModel || !live2dModel.internalModel.coreModel) return;
       const core = live2dModel.internalModel.coreModel;
       if (typeof core.setParameterValueById === 'function') {
-        core.setParameterValueById('ParamMouthOpenY', currentMouthOpen);
         core.setParameterValueById('PARAM_MOUTH_OPEN_Y', currentMouthOpen);
+        core.setParameterValueById('ParamMouthOpenY', currentMouthOpen);
+
+        // Continuous natural chest breathing
+        breathPhase += (delta || 1.0) * 0.04;
+        const breathVal = (Math.sin(breathPhase) + 1.0) * 0.5; // 0.0 to 1.0
+        core.setParameterValueById('PARAM_BREATH', breathVal);
       }
     });
 
@@ -398,15 +403,19 @@
     }
   }
 
-  function triggerMotion(group, index) {
-    wakeToActiveFPS(3.5);
+  let lastMotionTime = Date.now();
+
+  function triggerMotion(group, index, priority = 3) {
+    wakeToActiveFPS(4.0);
+    lastMotionTime = Date.now();
     if (!live2dModel) return;
     try {
       if (group) {
+        console.log('[Live2D WebEngine] Triggering motion:', group, 'index:', index, 'priority:', priority);
         if (typeof index === 'number' && index >= 0) {
-          live2dModel.motion(group, index);
+          live2dModel.motion(group, index, priority);
         } else {
-          live2dModel.motion(group);
+          live2dModel.motion(group, undefined, priority);
         }
       }
     } catch (e) {
@@ -415,16 +424,27 @@
   }
 
   function setExpression(expId) {
-    wakeToActiveFPS(2.5);
+    wakeToActiveFPS(3.0);
     if (!live2dModel) return;
     try {
       if (expId !== undefined && expId !== null && expId !== '') {
+        console.log('[Live2D WebEngine] Setting expression:', expId);
         live2dModel.expression(expId);
       }
     } catch (e) {
       console.warn('[Live2D WebEngine] setExpression warning:', e);
     }
   }
+
+  // Periodic natural idle cycle keeper (every 18s of calm silence)
+  setInterval(() => {
+    if (!isSpeaking && !isPointerActive && live2dModel) {
+      const idleElapsed = Date.now() - lastMotionTime;
+      if (idleElapsed > 18000) {
+        triggerMotion('Idle', undefined, 2);
+      }
+    }
+  }, 10000);
 
   let currentOutfit = 'classic';
 

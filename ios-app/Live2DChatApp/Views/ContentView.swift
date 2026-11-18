@@ -604,9 +604,16 @@ public struct ContentView: View {
     private func setupServices() {
         lipSyncManager.bridgeController = bridgeController
 
-        networkService.onAudioReceived = { [weak lipSyncManager] audioData, displayText, actions in
+        networkService.onAudioReceived = { [weak lipSyncManager] audioData, displayText, actions, motionGroup, expressionName, cleanText in
             Task { @MainActor in
-                lipSyncManager?.enqueue(audioData: audioData, displayText: displayText, actions: actions)
+                lipSyncManager?.enqueue(
+                    audioData: audioData,
+                    displayText: displayText,
+                    actions: actions,
+                    motionGroup: motionGroup,
+                    expressionName: expressionName,
+                    cleanText: cleanText
+                )
             }
         }
 

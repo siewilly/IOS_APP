@@ -10,6 +10,25 @@ public final class NativeAudioLipSyncManager: NSObject, ObservableObject, AVAudi
         public let data: Data
         public let displayText: ServerDisplayText?
         public let actions: ServerAction?
+        public let motionGroup: String?
+        public let expressionName: String?
+        public let cleanText: String?
+
+        public init(
+            data: Data,
+            displayText: ServerDisplayText? = nil,
+            actions: ServerAction? = nil,
+            motionGroup: String? = nil,
+            expressionName: String? = nil,
+            cleanText: String? = nil
+        ) {
+            self.data = data
+            self.displayText = displayText
+            self.actions = actions
+            self.motionGroup = motionGroup
+            self.expressionName = expressionName
+            self.cleanText = cleanText
+        }
     }
 
     @Published public var isPlaying: Bool = false
@@ -35,9 +54,23 @@ public final class NativeAudioLipSyncManager: NSObject, ObservableObject, AVAudi
         }
     }
 
-    /// Enqueue an audio packet for playback and lip-syncing
-    public func enqueue(audioData: Data, displayText: ServerDisplayText? = nil, actions: ServerAction? = nil) {
-        let item = AudioQueueItem(data: audioData, displayText: displayText, actions: actions)
+    /// Enqueue an audio packet for playback, gesture animations, and lip-syncing
+    public func enqueue(
+        audioData: Data,
+        displayText: ServerDisplayText? = nil,
+        actions: ServerAction? = nil,
+        motionGroup: String? = nil,
+        expressionName: String? = nil,
+        cleanText: String? = nil
+    ) {
+        let item = AudioQueueItem(
+            data: audioData,
+            displayText: displayText,
+            actions: actions,
+            motionGroup: motionGroup,
+            expressionName: expressionName,
+            cleanText: cleanText
+        )
         queue.append(item)
 
         if audioPlayer == nil || !(audioPlayer?.isPlaying ?? false) {
@@ -49,11 +82,25 @@ public final class NativeAudioLipSyncManager: NSObject, ObservableObject, AVAudi
         guard !queue.isEmpty else {
             stopDisplayLink()
             bridgeController?.setMouthOpen(0.0)
+            // Settle smoothly back to natural idle posture & neutral face when speech finishes
+            bridgeController?.triggerMotion(group: "Idle")
+            bridgeController?.setExpression("exp_00_neutral")
             self.isPlaying = false
             return
         }
 
         let item = queue.removeFirst()
+
+        // 1. Trigger dynamic body motion for this spoken sentence
+        // If an emotion-specific motion was parsed, play it; otherwise default to "Talk" group
+        // so Emilia actively moves her arms and body naturally while speaking!
+        let targetMotion = item.motionGroup ?? "Talk"
+        bridgeController?.triggerMotion(group: targetMotion)
+
+        // 2. Trigger synchronized facial expression
+        if let exp = item.expressionName {
+            bridgeController?.setExpression(exp)
+        }
 
         do {
             audioPlayer = try AVAudioPlayer(data: item.data)
@@ -126,6 +173,8 @@ public final class NativeAudioLipSyncManager: NSObject, ObservableObject, AVAudi
         audioPlayer = nil
         stopDisplayLink()
         bridgeController?.setMouthOpen(0.0)
+        bridgeController?.triggerMotion(group: "Idle")
+        bridgeController?.setExpression("exp_00_neutral")
         self.isPlaying = false
     }
 }
