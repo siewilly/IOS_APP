@@ -46,6 +46,23 @@
 
 ## 📜 版本更新紀錄 (Version History / Changelog)
 
+### [v1.8.0] - 2026-11-18
+- **全棧極致效能架構重構與記憶體/I/O 瓶頸徹底清除 (Full-Stack Deep Performance & Zero-Blocking Optimization)**：
+  - **1. 生物增強中介層效能突破 (`emilia_biometric_enhancer.js`)**：
+    - **移除全頁 `MutationObserver` DOM 掃描風暴**：徹底刪除每次文字更新便遞迴走訪全頁 `p, span, div` 計算 `textContent` 的監聽器，直接透過 WebSocket 封包直驅 `[motion:...]` 動作，大幅消除主執行緒與打字機幀率抖動。
+    - **關閉背景語音喚醒重試迴圈 (`wakeWordActive = false`)**：預設停用 `webkitSpeechRecognition` 背景常駐重試，徹底符合靜音指示並避免背景麥克風資源佔用。
+    - **修復 `AudioContext` 實例洩漏與 `WeakMap` 參數快取**：改為全域複用單例 `bgmAudioContext`，並以 `WeakMap(core -> Map)` 按模型實例獨立快取 Live2D 參數索引，杜絕換裝時的索引錯位。
+  - **2. Live2D 渲染管線與 WAV PCM 解析高速化 (`lappmodel.ts` / `lappwavfilehandler.ts`)**：
+    - **頂點計算前注入生物微動 (`__emiliaApplyBiometrics`)**：將生物神經元微動從原本 `model.draw()` 之後提前至 `this._model.update()` 計算之前注入，消除一幀畫面延遲與參數被覆寫的問題。
+    - **16-bit PCM 直接向量化讀取**：重寫 `LAppWavFileHandler.loadWavFile` 迴圈，直接以 `DataView.getInt16(..., true)` 讀取樣本（含安全邊界保護），消除 40 萬次以上逐樣本函式呼叫造成的話音初期卡頓。
+  - **3. 桌面寵物主進程與翻譯雙向防抖 (`pet-main.cjs` / `input-subtitle.tsx`)**：
+    - `saveBounds` 改採 **300ms 防抖 ＋ 非同步 `fs.promises.writeFile`**，徹底消除拖曳或縮放桌寵視窗時的同步磁碟 I/O 卡頓。
+    - 桌寵版 `InputSubtitle` 的 `/api/translate` 請求同步補齊 **120ms 防抖機制**。
+  - **4. Python 後端事件循環零阻塞與 $O(|C|)$ 記憶檢索 (`Open-LLM-VTuber`)**：
+    - **`/api/capture-screen` 與音訊封裝全非阻塞化**：於 [server.py](file:///home/siewilly/Live2D_pet/Open-LLM-VTuber/src/open_llm_vtuber/server.py) 與 [tts_manager.py](file:///home/siewilly/Live2D_pet/Open-LLM-VTuber/src/open_llm_vtuber/conversations/tts_manager.py) 中透過 `asyncio.to_thread` 卸載截圖、影像縮放與音訊處理；[stream_audio.py](file:///home/siewilly/Live2D_pet/Open-LLM-VTuber/src/open_llm_vtuber/utils/stream_audio.py) 對原生 `.wav` 檔直接讀取載入，略過多餘 `ffmpeg` 子進程轉檔。
+    - **長期記憶索引升級為 $O(|C|)$ 雜湊定位 (`local_memory_system.py`)**：新增 `_id_to_idx` 雜湊對映表（支援驅逐重建同步）與緊湊 JSON 格式 (`separators=(",", ":")`)，避免線性走訪並縮小序列化體積。
+  - **5. 廢棄檔案清理**：清除 `frontend/assets/` 超過 60MB 的舊雜湊打包檔與根目錄臨時 `enhancer_from_line_*.js` 碎片檔案。
+
 ### [v1.7.2] - 2026-11-17
 - **暫時停用聲音接收功能與麥克風常駐監聽 (Temporarily Disable Audio Reception / Always-On Mic)**：
   - **聲音接收功能安全關閉（Microphone & VAD Muted）**：
