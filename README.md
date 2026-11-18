@@ -1,320 +1,248 @@
 # 愛蜜莉雅 (Emilia) 靈動生物引擎 Live2D 桌面寵物
 
-> 原汁原味《Re:從零開始的異世界生活》愛蜜莉雅桌面伴侶。融合官方 Live2D 渲染架構、微表情生物模擬引擎、Fish Speech 高橋李依聲線克隆、Groq 秒級容錯大模型池、零 Token 螢幕視覺感知與純淨桌寵互動卡片。
+> 原汁原味《Re:從零開始的異世界生活》愛蜜莉雅桌面伴侶。融合官方 Live2D 渲染、微表情生物模擬引擎、Fish Audio 高橋李依聲線、Groq 秒級容錯大模型池、零 Token 螢幕視覺感知、Omni-Net 聯網中樞、跨裝置 Soul-Link 同步、Discord 連動與音樂旋律編舞系統。
+
+**目前版本：v2.2.0**（2026-11-18）｜完整更新歷程見 [docs/CHANGELOG.md](docs/CHANGELOG.md)
 
 ---
 
-## 🌟 核心特色與實裝功能
+## 📑 目錄
 
-1. **純淨桌寵介面（InputSubtitle 卡片）**：
-   - 預設擺脫厚重 Repo 儀表板，僅呈現極致純粹的 Live2D 角色與底部懸浮對話卡片（支援自由拖曳、即時字幕顯示、打斷與語音輸入開關）。
-2. **頂部 HUD 水平平滑滑動工具列**：
-   - 包含好感度羈絆膠囊、一鍵換裝（經典大衣 / 夏日泳裝）、番茄鐘、治癒 BGM、小日記、語音喚醒、視覺感知、調校室等完整功能。
-3. **無邊框全透明背景桌面寵物 (Pet Mode)**：
-   - 支援系統級透明穿透、滑鼠穿透與視窗化雙向切換。
-4. **零 Token 本機畫面感知 (Screen Vision)**：
-   - 透過 `/api/capture-screen` 在本機進行毫秒級 Perceptual Diff 像素比對，未變動自動攔截，Token 消耗精準為 0。
-5. **待機 30 分鐘溫柔關懷 (Proactive Speaking)**：
-   - 閒置門檻設為 30 分鐘，專注不打擾，支援 `[SILENT]` 靜默陪伴機制。
-6. **Groq 免費備用模型秒級容錯切換池**：
-   - 主力 `qwen/qwen3.8-27b`（40ms 響應）遇 429 速率限制時，0.1 秒無縫轉移至備用池 `openai/gpt-oss-120b` 與 `openai/gpt-oss-20b`，自動字串清洗杜絕報錯中斷。
-7. **全網際網路 / 區網跨設備連線**：
-   - 支援 Cloudflare HTTPS 安全加密通道，手機與外網設備皆可開啟麥克風語音互動。
+1. [功能總覽](#-功能總覽)
+2. [系統架構與專案結構](#-系統架構與專案結構)
+3. [快速啟動](#-快速啟動)
+4. [操作說明](#-操作說明)
+5. [好感度羈絆系統 3.0](#-好感度羈絆系統-30)
+6. [後端 API 一覽](#-後端-api-一覽)
+7. [設定與資安](#-設定與資安)
+8. [版本紀錄摘要](#-版本紀錄摘要)
+9. [開發維護硬性規範](#-開發維護硬性規範)
 
 ---
 
-## 🚀 快速啟動指南
+## 🌟 功能總覽
 
-### 1. 本地啟動腳本
-```bash
-# 啟動桌寵後端與桌面客戶端
-./start_pet.sh
+### 🖥️ 介面與桌寵
+| 功能 | 說明 |
+|---|---|
+| 純淨桌寵介面 | 預設僅 Live2D 角色 ＋ 底部懸浮 `InputSubtitle` 對話卡片 ＋ 頂部 HUD，不載入 Repo 儀表板／側邊欄（見[介面純粹性原則](#-開發維護硬性規範)） |
+| 桌寵 / 網頁解耦 | `PetView`（Electron，`?mode=pet`）與 `WebView`（瀏覽器，`?mode=web`）為兩個獨立模組，樣式與邏輯互不污染，並可雙向切換 |
+| 無邊框透明桌寵視窗 | 440×700 緊湊視窗、100% 透明、預設停靠螢幕左下角，座標持久化於 `pet_bounds.json`，支援滑鼠穿透 |
+| 靈動控制台 | 桌寵：右上角紫水晶吊墜展開毛玻璃 Console Deck（換裝／BGM／番茄鐘／視覺感知／語音喚醒／冒險日記／好感羈絆／歷史對話接續）；網頁：`WebToolMenu` 抽屜 |
+| 手機網頁 / PWA | `100dvh` + 安全區適配、角色固定置中、滑出式抽屜、快捷提示詞膠囊、PWA manifest |
+| 日文主字幕 ＋ 繁中副字幕 | 日文原聲大字、繁中翻譯小字（0ms 括號雙語解析，缺失時呼叫 `/api/translate`）、逐字打字機、4-Bar 語音等化器 |
+| 物理阻尼嘴形 | 非對稱指數低通（Attack 20 / Decay 12）消除 Lip Sync 抽動 |
+| 一鍵換裝 | 4星經典大衣 ⇄ 4星夏日泳裝，換裝後保留同一記憶池與對話上下文 |
+| 接續歷史聊天 | 所有造型共用 `conf_uid: emilia_4star_001`；控制台可查看、接續、新建、刪除歷史對話 |
 
-# 停止所有桌寵服務
-./stop_pet.sh
+### 🧠 AI 與對話
+| 功能 | 說明 |
+|---|---|
+| Groq 容錯模型池 | 主力 `qwen/qwen3.8-27b`，遇 429 於 0.1 秒內切至 `openai/gpt-oss-120b` / `gpt-oss-20b`，自動清洗字串；Vision 429 短暫重試 |
+| Fish Audio TTS | 高橋李依聲線克隆，`balanced` 延遲模式 |
+| 日文發言語言防線 | 系統提示末尾強制括號外 100% 日文、繁中翻譯僅置於 `(...)` 內 |
+| 長期記憶 | 2 秒防抖非同步落盤、`_id_to_idx` 雜湊 $O(|C|)$ 檢索、緊湊 JSON |
+| 好感度人格注入 | 依 Lv.1~Lv.8 注入對應語氣與觸控反應描述 |
+| 日記 / 情書生成 | `/api/generate-diary`：依近期對話與心情生成「冒險日記」或 Lv.4+「戀人親筆情書」，無 LLM 時有保底文案 |
+| 麥克風 | 目前**停用**語音接收與 VAD（`AUDIO_INPUT_DISABLED = true`），愛蜜莉雅 TTS 發聲完整保留 |
 
-# 重啟桌寵服務
-./restart_pet.sh
+### 🌐 Omni-Net 聯網中樞（`internet_hub.py`）
+- **即時聯網搜尋**：Google News 台灣版 RSS ＋ 中文維基 OpenSearch，時事／知識問題自動注入。
+- **網址導讀**：YouTube oEmbed、Jina Reader、HTML 清洗。
+- **台灣即時天氣**：Open-Meteo（15 分鐘快取），顯示於 HUD 並注入對話。
+- **ACG／科技頭條與晨間簡報**：巴哈姆特 GNN ＋ Google 新聞，網頁端「☀️ 今日晨間簡報」一鍵播報。
+
+### 👁️ 智慧桌面觀察（零 Token）
+- `/api/capture-screen`：本機 16×9 分塊 Perceptual Diff，遮罩桌寵自身視窗（`pet_bounds.json`），未變動即攔截，Token 為 0。
+- `/api/desktop-status`：GNOME Mutter `IdleMonitor` 閒置時間、運行應用、焦點視窗。
+- **主動關懷**：3 分鐘觀察冷卻、免打擾（說話／打字／番茄鐘／剛聊天）、離開 5 分鐘後回座「おかえりなさい！」、專注 30 分鐘貼心提醒、`[SILENT]` 靜默陪伴；背景觀察與聊天記憶隔離（`proactive_vision` / `skip_history` / `skip_memory`）。
+- **意圖觸發看螢幕**：「你猜我在做什麼？」「幫我看這個報錯」等語句自動附帶截圖。
+
+### 🎵 音樂與編舞
+- **全網搜歌與串流**：Apple iTunes（JP/TW 並行，256kbps AAC）＋ SoundCloud 備援；`/api/music-search`、`/api/music-stream` 同源代理並以 SHA1 磁碟快取（`cache/music/`），確保 `AnalyserNode` 可讀頻譜。
+- **自然語言點歌**：「幫我上網找 YOASOBI 的 Idol」「播放 周杰倫 晴天」→ `[bgm:play:{query}]` / `[bgm:next]` / `[bgm:stop]`。
+- **內建多聲部曲庫**：《Stay Alive》《Wishing》《Realize (124 BPM)》《異世界暖陽 Lofi》《微精靈之歌》。
+- **1024-FFT 旋律追蹤**：主旋律音高 → 仰首／低頭，低頻瞬態與 BPM → 節拍，人聲頻譜 → 跟唱嘴型。
+- **六段式編舞**：💃 偶像重拍彈跳／🎶 旋律追隨＋雙手波浪／✨ 8 字立體律動／🌸 副歌躍動轉身／⭐ 側步花式打拍／🌙 夢幻華爾滋，可自動輪替或一鍵「🔀 換舞步」。
+- **點唱機 UI**：網頁端搜尋框、專輯封面、當前曲目與舞步徽章。
+
+### 🔗 連線與同步
+- **跨裝置 Soul-Link**：`/api/companion-state` 原子合併好感度、愛稱、日記、音樂狀態至 `cache/companion_state.json`（以 `updatedAt` 判斷新舊），桌寵／網頁／Discord 共用。
+- **區網與外網**：`/api/network-info` 自動探測區網 IP 與 Cloudflare Tunnel；網頁內建純 TS ISO-18004 **QR Code 掃碼配對**；`ws:`/`wss:` 依 Origin 動態選擇。
+- **Discord Bot**（`discord_bot.py`）：Gateway v10 ＋ REST，支援 DM、@提及與 `!emilia` / `!weather` / `!briefing` / `!sing`，共用記憶與好感度，可附 Fish Audio 日語語音；網頁控制台一鍵設定 Token 與啟停（`/api/discord-config`）。
+
+### ⚡ 效能
+- 前端：`EmiliaDialogueCard` Memoized、Vite `manualChunks`（`vendor-ai` / `vendor-utils`）、翻譯 120ms 防抖、移除全頁 MutationObserver、`AudioContext` 單例、`WeakMap` 參數快取、WAV 16-bit PCM 向量化讀取、生物微動於 `model.update()` 前注入。
+- 桌寵主進程：`saveBounds` 300ms 防抖＋非同步寫檔；`LAppPal` 以 `performance.now()` 計時並限制 delta（1~50ms）。
+- 後端：`asyncio.to_thread` 卸載截圖／音訊、`.wav` 免 ffmpeg、`AsyncOpenAI` 連線池＋LRU 翻譯快取、`LazyASREngine`（啟動由 4 秒降至約 1 秒）。
+
+---
+
+## 🏗️ 系統架構與專案結構
+
+```mermaid
+flowchart LR
+  subgraph Client
+    P["桌寵 Electron\nPetView"]
+    W["網頁 / 手機 PWA\nWebView"]
+    D["Discord Bot"]
+  end
+  subgraph Backend["Open-LLM-VTuber (FastAPI, :12393)"]
+    WS["WebSocket 對話"]
+    API["/api/* 端點"]
+    HUB["Omni-Net Hub"]
+    AG["BasicMemoryAgent"]
+  end
+  P & W <--> WS
+  P & W --> API
+  D --> AG
+  WS --> AG --> LLM["Groq 容錯池"]
+  AG --> TTS["Fish Audio TTS"]
+  API --> HUB
 ```
 
-### 2. 存取入口
-- **本機網頁版**：`http://localhost:12393`
-- **區域網路 (Wi-Fi)**：`http://192.168.1.103:12393`
-- **外網安全通道 (HTTPS)**：透過 `cloudflared tunnel --url http://localhost:12393` 取得即時網址
+```
+Live2D_pet/
+├── README.md                 # 本文件
+├── docs/CHANGELOG.md         # 完整版本更新紀錄
+├── start_pet.sh / stop_pet.sh / restart_pet.sh
+├── .gemini/rules/project_rules.md   # 版本更新硬性規範
+├── models/                   # Emilia 原始模型素材
+├── cache/                    # companion_state / music / discord_config（不入版控）
+├── Open-LLM-VTuber/          # Python 後端
+│   ├── conf.yaml, model_dict.json, characters/*.yaml
+│   ├── capture_screen.py, run_server.py
+│   ├── live2d-models/        # emilia_4star, emilia_4star_ss, mao_pro, shizuku
+│   └── src/open_llm_vtuber/  # server.py, discord_bot.py, utils/internet_hub.py,
+│                             # agent/agents/basic_memory_agent.py ...
+└── Open-LLM-VTuber-Web/      # Electron + React 前端
+    ├── pet-main.cjs / pet-preload.cjs / pet_bounds.json
+    └── src/renderer/
+        ├── src/pet/ (PetView)、src/web/ (WebView, WebToolMenu)
+        ├── public/assets/emilia_biometric_enhancer.js  # 生物微動／好感度／編舞／控制台
+        └── WebSDK/ (LAppModel 等 Live2D 渲染層)
+```
 
 ---
 
-## 📜 版本更新紀錄 (Version History / Changelog)
+## 🚀 快速啟動
 
-### [v2.1.0] - 2026-11-18
-- **全網音樂串流點播與音訊頻譜旋律多維度動態編舞系統 (`Online Music Stream & Multi-Dimensional Melody Rhythm Choreography`)**：
-  - **1. 後端全網極速音樂搜尋與同源串流代理 (`internet_hub.py` / `server.py`)**：
-    - **全網搜歌中樞 (`search_online_music`)**：整合 Apple iTunes Search API (JP/TW 區域並行，350ms 極速官方 256kbps AAC 音源) 與 SoundCloud 備援檢索，自動提取標題、藝人、300×300 官方高畫質專輯封面與即時串流路徑。
-    - **同源代理串流與本機快取 (`/api/music-stream` & `/api/music-search`)**：由後端代理轉發音訊並附加 `Access-Control-Allow-Origin: *` 標頭與 SHA1 磁碟快取 (`cache/music/`)，杜絕跨網域 CORS Tainting 導致 WebAudio `AnalyserNode` 頻譜數值全為 0 的限制。
-    - **自然語言點歌意圖解析 (`extract_song_query` / `detect_music_command`)**：支援「愛蜜莉雅，幫我上網找 YOASOBI 的 Idol 來播」、「播放 周杰倫 晴天」、「我想聽 LiSA 的紅蓮華」、「放首輕快的日文歌」等各類口語表達，精準萃取曲目關鍵字並生成 `[bgm:play:{query}]` / `[motion:happy]` 控制標籤。
-  - **2. 前端 1024-FFT 旋律音高動態追蹤與人聲跟唱嘴型 (`emilia_biometric_enhancer.js`)**：
-    - 前端新增 `<audio id="emilia-online-audio">` 與 WebAudio `MediaElementAudioSourceNode` 串接，結合 1024-FFT 頻譜質心主旋律音高即時分析 (`smoothedMelodyPitch`)、重低音瞬態節奏 (Onset Transient) 與節奏 BPM 計算。
-    - 飆高音時自然仰首挺胸 (`PARAM_ANGLE_Y`, `PARAM_BODY_ANGLE_Y`)、低音時溫柔低頭垂眸，並依據人聲頻譜即時驅動跟唱閉合嘴型 (`PARAM_MOUTH_OPEN_Y`)。
-  - **3. 六段式多維度動態編舞狀態機 (徹底告別單一 Z 軸左右搖擺)**：
-    - 實裝 6 種不同動態風格的立體編舞模式，依歌曲副歌與節拍自動或手動輪替：
-      1. `💃 偶像重拍彈跳`：強勁低音垂直彈跳 (`PARAM_POSITION_Y`, `PARAM_STRETCH`) 與輕快踩點打拍。
-      2. `🎶 旋律音高追隨＋雙手波浪`：主旋律音高仰首挺胸，雙臂雙手柔美波浪起伏 (`PARAM_ARM_L/R_ROTATE`, `PARAM_HAND_L/R_ROTATE`)。
-      3. `✨ 8字立體律動`：3D 空間立體 8 字軀幹與頭部律動軌跡 (`PARAM_ANGLE_X/Y/Z`, `PARAM_BODY_ANGLE_X/Y`)。
-      4. `🌸 副歌躍動轉身顧盼`：高潮副歌躍動轉身、回眸含情脈脈凝視互動。
-      5. `⭐ 側步花式打拍`：左右踏步位移 (`PARAM_POSITION_X`)、輕盈雙肩聳動與活潑踩點。
-      6. `🌙 夢幻華爾滋`：優美大圓周軀幹傾斜、雙臂環抱與秀髮裙擺物理微風飄拂。
-  - **4. 網頁端線上點唱機與即時熱舞控制台升級 (`WebToolMenu.tsx` / `WebView.tsx`)**：
-    - 「🎵 線上搜歌與旋律熱舞點唱機」新增即時線上搜尋輸入框、專輯封面卡片、當前播放曲目、線上搜尋推薦結果與一鍵「🔀 換舞步」切換鈕。
-    - 頂部導航列動態顯示當前線上播放歌曲標題與舞步徽章，底部快捷膠囊無縫升級為真實在線歌曲點播。
+```bash
+./start_pet.sh     # 啟動後端 (run_server.py) 並等待 12393 就緒，再啟動 Electron 桌寵
+./stop_pet.sh      # 停止所有桌寵服務
+./restart_pet.sh   # 重啟
+# 或手動：cd Open-LLM-VTuber-Web && npm run pet
+```
+日誌：`Open-LLM-VTuber/logs/autostart_server.log`、`Open-LLM-VTuber-Web/logs/autostart_pet.log`。
+前端開發：`npm run dev` / `npm run build` / `npm run typecheck`。
 
-### [v2.0.0] - 2026-11-18
-- **Omni-Net 全套聯網架構、Discord 機器人連動與點歌全身節奏熱舞系統實裝 (`Omni-Net & Soul-Link + DC Bot + Rhythm Dance`)**：
-  - **1. 後端聯網智慧中樞 (`Open-LLM-VTuber/src/open_llm_vtuber/utils/internet_hub.py` & `basic_memory_agent.py`)**：
-    - **A1 即時聯網搜尋 (`search_web_instant`)**：結合 Google News 台灣版頭條 RSS 與中文維基百科 OpenSearch API，當詢問時事或知識時自動聯網檢索注入系統提示。
-    - **A2 網頁與 YouTube 導讀 (`extract_url_content`)**：偵測對話中的網址時，自動透過 YouTube oEmbed、Jina Reader 與 HTML 清洗回傳摘要供愛蜜莉雅導讀。
-    - **A3 台灣即時天氣感知 (`get_taiwan_weather`)**：對接免費 Open-Meteo 氣象資料（含 15 分鐘快取），即時注入溫度、體感與天氣狀況至對話與網頁頂部 HUD。
-    - **B1 + B2 動漫科技頭條與晨間簡報 (`fetch_acg_and_tech_news` / `/api/internet-briefing`)**：整合巴哈姆特 GNN 與 Google 新聞 ACG／AI 科技 RSS，並於網頁端提供「☀️ 今日晨間簡報」一鍵播報。
-    - **點歌意圖識別 (`detect_music_command`)**：識別點歌、換歌與停止音樂指令，注入 `[bgm:play:...]` / `[bgm:next]` / `[bgm:stop]` 與 `[motion:happy]` 控制標籤。
-  - **2. C1 跨裝置靈魂同步 & C2 手機 PWA 與 QR 配對 (`server.py`, `manifest.webmanifest`, `index.html`, `WebToolMenu.tsx`)**：
-    - 新增 `/api/companion-state` (GET/POST) 將好感度 (`intimacyScore`)、愛稱、回憶日記與音樂狀態原子合併至 `cache/companion_state.json`，打通桌寵、網頁與 Discord 同步。
-    - 加入 PWA 設定與 iOS/Android 安全區適配；新增 `/api/network-info` 自動探測區網 IP 與 Cloudflare Tunnel 網址，並於 `WebToolMenu` 內建純 TypeScript ISO-18004 QR Code 掃碼配對卡片。
-  - **3. Discord Bot 雙向連動引擎 (`Open-LLM-VTuber/src/open_llm_vtuber/discord_bot.py` & `/api/discord-config`)**：
-    - 使用既有 `websockets` + `httpx` 實作免額外相依的 Discord Gateway v10 + REST v10 橋接器（支援 DM、@提及與 `!emilia` / `!weather` / `!briefing` / `!sing` 指令），共用記憶池與 Soul-Link 好感度，並支援附加 **Fish Audio TTS 日語語音檔附件** 回覆；網頁控制台新增一鍵設定 Token 與啟停面板。
-  - **4. 多聲部音樂合成器 ＋ 音訊頻譜全身節奏熱舞 (`emilia_biometric_enhancer.js`, `WebView.tsx`)**：
-    - 擴充 5 首多聲部（主旋律＋和弦伴奏＋低音）曲庫：《Stay Alive》、《Wishing》、《Realize (124 BPM)》、《異世界暖陽 Lofi》、《微精靈之歌》，搭配 `AnalyserNode` 頻譜能量與節拍脈衝。
-    - `applyBiometrics` 於播放音樂時同步驅動 **頭部三軸搖擺點頭 (`PARAM_ANGLE_X/Y/Z`)、軀幹搖擺與彈跳 (`PARAM_BODY_ANGLE_X/Y/Z`, `PARAM_POSITION_Y`, `PARAM_STRETCH`, `PARAM_SHOLDER_POSITION`)、雙臂手腕揮舞 (`PARAM_SHOULDER/ARM/HAND_L/R_ROTATE`)、秀髮裙擺物理及微笑神情**；文字/快捷點歌皆可零延遲觸發。
+**存取入口**
+- 本機網頁：`http://localhost:12393`
+- 區網：`http://<區網IP>:12393`（IP 可由 `/api/network-info` 或網頁 QR 取得）
+- 外網 HTTPS：`cloudflared tunnel --url http://localhost:12393`
 
-### [v1.10.0] - 2026-11-18
-- **桌寵「接續歷史聊天」功能與統一造型記憶池實裝 (`Chat History Continuity`)**：
-  - **1. 統一愛蜜莉雅造型記憶池與歷史紀錄合併 (`characters/emilia_4star*.yaml` / `chat_history/`)**：
-    - 將經典大衣、夏日泳裝、GPT-120B、LLaMA-70B 等角色設定檔的 `conf_uid` 全面統一為 `emilia_4star_001`，並合併既有的過往對話 JSON 檔案至同一記憶池。
-  - **2. 後端換裝無縫延續記憶與空白歷史檔保護 (`service_context.py` / `chat_history_manager.py` / `websocket_handler.py`)**：
-    - `ServiceContext.handle_config_switch` 換裝重建 Agent 後，自動保留 `self.history_uid` 並呼叫 `set_memory_from_history` 載入當前對話上下文；同步更新 `init_agent` 以支援新角色識別碼。
-    - `get_history_list` 新增 `active_history_uid` 保護參數，避免啟動新建的空白對話在使用者尚未發言前開啟歷史清單時被誤刪。
-  - **3. 前端歷史狀態橋接與單句字幕同步 (`websocket-handler.tsx`)**：
-    - 修正 `config-switched` 與 `history-list` 事件處理：換裝時不再強制發送 `create-new-history` 或覆蓋現有對話，維持極簡單句字幕狀態；載入歷史對話（`history-data`）時自動擷取最後一則愛蜜莉雅回覆顯示於桌寵底部字幕框並同步展開。
-    - 建立 `window.emiliaHistoryBridge` 與 `emilia-history-update` 事件通道，支援清單更新、切換接續、開啟全新對話與刪除歷史紀錄。
-  - **4. 紫水晶「靈動控制台」歷史對話接續面板 (`emilia_biometric_enhancer.js`)**：
-    - 於右上角紫水晶「愛蜜莉雅 · 靈動控制台」新增「💬 歷史對話接續」專屬按鈕（底部對話卡片維持純淨）。
-    - 實作毛玻璃記憶庫彈窗（`openChatHistoryModal`），支援格式化時間、清洗標籤之最後對話預覽、當前對話標記、`➕ 開啟全新對話`、單擊接續過往聊天以及 `🗑️` 刪除紀錄，完整適配 440×700 透明桌寵滑鼠互動與點擊穿透保護。
+---
 
-### [v1.9.1] - 2026-11-18
-- **智慧桌面觀察系統重構與視覺意圖感知升級 (`Smart Desktop Observation System`)**：
-  - **1. 本機 OS 狀態與遮罩分塊視覺引擎 (`capture_screen.py` / `server.py`)**：
-    - 新增 `GET /api/desktop-status` 毫秒級端點，結合 GNOME Mutter `IdleMonitor` 真實系統鍵鼠閒置時間、`ps` 桌面運行應用與 XWayland 焦點視窗名稱，實現零 Token 狀態偵測。
-    - 將畫面比對升級為**「桌寵視窗區域遮罩 (`pet_bounds.json`) ＋ 16×9 分塊結構感知 (Grid Perceptual Diff)」**，避免愛蜜莉雅自身動作、對話框與動態桌布造成假陽性觸發，同時能精準捕捉深色 IDE 或終端機局部文字變動；加入執行緒安全鎖與 1.5 秒記憶體快取杜絕重複截圖。
-  - **2. 3 分鐘智慧主動觀察守護與「歡迎回來」問候 (`emilia_biometric_enhancer.js` / `WebToolMenu.tsx`)**：
-    - 修復原定時視覺守護因未定義 `showFloatingHeart` 而崩潰、以及重複截圖兩次的 Bug；預設開啟並持久化守護開關。
-    - 實作雙軌狀態機：支援 **3 分鐘主動觀察冷卻**、**免打擾保護**（說話中、打字中、番茄鐘專注中、剛聊天 60 秒內不插話）、**離開座位 5 分鐘後回到電腦前動滑鼠觸發「おかえりなさい！（歡迎回來）」問候**，以及**連續專注操作滿 30 分鐘結合螢幕內容的貼心關懷**。
-  - **3. Case A 對話意圖自動看螢幕 (`Intent-Triggered Vision`)**：
-    - 於 WebSocket 傳送層新增語意偵測（如「你猜猜我現在正在做什麼？」、「你看一眼電腦螢幕」、「幫我看這個報錯」等），命中時自動即時擷取螢幕快照與桌面狀態隨訊息送出，徹底解決日常對話時「看不到畫面」的問題。
-  - **4. 靜默觀察記憶隔離與 Vision 429 容錯 (`conversation_handler.py` / `single_conversation.py` / `basic_memory_agent.py` / `openai_compatible_llm.py`)**：
-    - 為背景主動觀察導入 `proactive_vision` / `skip_history` / `skip_memory` 隔離與 `recent_observations` 近期話題去重，避免誤加聊天好感度與洗版長期記憶；延遲發送對話啟動訊號並在偵測 `[SILENT]` 時於後端完全靜默中止。
-    - 優化 `ai-speak-signal` 自動補圖與 `qwen/qwen3.8-27b` Vision 429 短暫重試機制，若必須退回純文字備用模型時附上防幻覺指引。
+## 🎮 操作說明
 
-### [v1.9.0] - 2026-11-18
-- **資安強化、資源按需載入、雙語無延遲解析與統一事件匯流排架構升級 (`Architecture, Security, Lazy ASR & Unified Bridge`)**：
-  - **1. 資安防護與金鑰外置化 (`server.py`)**：
-    - **`/api/capture-screen` 本機／區網白名單防護**：新增 `_is_local_or_lan_request`，嚴格驗證來源 IP 與 `CF-Connecting-IP` / `X-Forwarded-For` 標頭，拒絕外網穿透訪客呼叫截圖端點（回傳 HTTP 403）。
-    - **移除硬編碼 Groq API Key**：改由環境變數 `GROQ_API_KEY` 或 `conf.yaml`（`groq_llm.llm_api_key`）動態讀取密鑰。
-  - **2. 按需延遲載入 ASR 與零冗餘音訊負載 (`service_context.py` / `stream_audio.py`)**：
-    - **`LazyASREngine` 延遲初始化**：後端啟動時僅登錄輕量代理實例，待實際收到語音轉文字請求時才載入 `sherpa_onnx_asr` 模型，伺服器啟動時間由 4 秒以上降至約 **1 秒**並節省大量待機記憶體。
-    - **消除重複音量計算 (`prepare_audio_payload`)**：對於 `.wav` 音訊直接讀取位元組並設 `volumes = []`，略過後端 `pydub` 解碼與逐 20ms 切片計算（統一由前端 `LAppWavFileHandler` 讀取 WAV PCM 計算 RMS）。
-  - **3. 長期記憶非同步防抖落盤 (`local_memory_system.py`)**：
-    - `add_memory` 改透過 `threading.Timer`（2.0 秒防抖）＋ `atexit` 安全 `flush()` 寫入磁碟，對話回合不再阻塞於同步寫檔。
-  - **4. 多句括號雙語 0ms 解析與桌寵雙語層次統一 (`WebView.tsx` / `input-subtitle.tsx`)**：
-    - 新增共用 `parseBilingualText` 解析器，可精準拆解單句與多句混排括號翻譯（僅擷取含漢字且不含假名之括號內容），前後端同步支援於 **0ms** 內免二次呼叫翻譯端點。
-    - 同步升級桌面寵物端 `InputSubtitle` 排版與網頁版一致：**上方日文原聲大字 ＋ 下方繁體中文副字幕**。
-  - **5. 統一前端事件橋接 `window.emiliaBridge` 與安全分包 (`emilia_biometric_enhancer.js` / `WebToolMenu.tsx` / `vite.config.ts`)**：
-    - 以 `window.emiliaBridge` ＋ `emilia-bridge-update` 事件取代脆弱的 `document.getElementById(...).click()` 模擬點擊，於網頁端 `WebToolMenu` 補齊 **🍅 25分鐘番茄鐘專注**、**📖 冒險日記** 與 **BGM 即時播放狀態** 同步；網頁模式下將右上紫水晶吊墜下移至 `top: 64px` 避免與頂部列重疊。
-    - 調整 `vite.config.ts` `manualChunks` 僅獨立拆出無 React 依賴的 `vendor-ai`（578.55 kB）與 `vendor-utils`（71.66 kB），杜絕 Rollup CommonJS 循環依賴錯誤同時縮減主包體積。
+| 操作 | 效果 |
+|---|---|
+| 左鍵點擊 / 撫摸角色 | 100% 保留給 Live2D 觸控互動（摸頭、戳臉頰、拍肩……） |
+| **右鍵 / 中鍵拖曳**、**Alt＋左鍵拖曳** | 移動桌寵視窗（微小位移視為點擊） |
+| 右鍵（無拖曳） | 桌寵選單：保持置頂／重新載入／結束桌寵（經 `pet-show-context-menu` IPC） |
+| 紫水晶吊墜 | 展開／收合靈動控制台 |
+| 對話卡片 | 點擊立即展開全句；輸入文字或點歌／問天氣／要簡報 |
+| 系統匣 | Tray 圖示控制桌寵 |
 
-### [v1.8.0] - 2026-11-18
-- **全棧極致效能架構重構與記憶體/I/O 瓶頸徹底清除 (Full-Stack Deep Performance & Zero-Blocking Optimization)**：
-  - **1. 生物增強中介層效能突破 (`emilia_biometric_enhancer.js`)**：
-    - **移除全頁 `MutationObserver` DOM 掃描風暴**：徹底刪除每次文字更新便遞迴走訪全頁 `p, span, div` 計算 `textContent` 的監聽器，直接透過 WebSocket 封包直驅 `[motion:...]` 動作，大幅消除主執行緒與打字機幀率抖動。
-    - **關閉背景語音喚醒重試迴圈 (`wakeWordActive = false`)**：預設停用 `webkitSpeechRecognition` 背景常駐重試，徹底符合靜音指示並避免背景麥克風資源佔用。
-    - **修復 `AudioContext` 實例洩漏與 `WeakMap` 參數快取**：改為全域複用單例 `bgmAudioContext`，並以 `WeakMap(core -> Map)` 按模型實例獨立快取 Live2D 參數索引，杜絕換裝時的索引錯位。
-  - **2. Live2D 渲染管線與 WAV PCM 解析高速化 (`lappmodel.ts` / `lappwavfilehandler.ts`)**：
-    - **頂點計算前注入生物微動 (`__emiliaApplyBiometrics`)**：將生物神經元微動從原本 `model.draw()` 之後提前至 `this._model.update()` 計算之前注入，消除一幀畫面延遲與參數被覆寫的問題。
-    - **16-bit PCM 直接向量化讀取**：重寫 `LAppWavFileHandler.loadWavFile` 迴圈，直接以 `DataView.getInt16(..., true)` 讀取樣本（含安全邊界保護），消除 40 萬次以上逐樣本函式呼叫造成的話音初期卡頓。
-  - **3. 桌面寵物主進程與翻譯雙向防抖 (`pet-main.cjs` / `input-subtitle.tsx`)**：
-    - `saveBounds` 改採 **300ms 防抖 ＋ 非同步 `fs.promises.writeFile`**，徹底消除拖曳或縮放桌寵視窗時的同步磁碟 I/O 卡頓。
-    - 桌寵版 `InputSubtitle` 的 `/api/translate` 請求同步補齊 **120ms 防抖機制**。
-  - **4. Python 後端事件循環零阻塞與 $O(|C|)$ 記憶檢索 (`Open-LLM-VTuber`)**：
-    - **`/api/capture-screen` 與音訊封裝全非阻塞化**：於 [server.py](file:///home/siewilly/Live2D_pet/Open-LLM-VTuber/src/open_llm_vtuber/server.py) 與 [tts_manager.py](file:///home/siewilly/Live2D_pet/Open-LLM-VTuber/src/open_llm_vtuber/conversations/tts_manager.py) 中透過 `asyncio.to_thread` 卸載截圖、影像縮放與音訊處理；[stream_audio.py](file:///home/siewilly/Live2D_pet/Open-LLM-VTuber/src/open_llm_vtuber/utils/stream_audio.py) 對原生 `.wav` 檔直接讀取載入，略過多餘 `ffmpeg` 子進程轉檔。
-    - **長期記憶索引升級為 $O(|C|)$ 雜湊定位 (`local_memory_system.py`)**：新增 `_id_to_idx` 雜湊對映表（支援驅逐重建同步）與緊湊 JSON 格式 (`separators=(",", ":")`)，避免線性走訪並縮小序列化體積。
-  - **5. 廢棄檔案清理**：清除 `frontend/assets/` 超過 60MB 的舊雜湊打包檔與根目錄臨時 `enhancer_from_line_*.js` 碎片檔案。
+桌寵模型固定於 `y = 0.10`（頂部留白供氣泡顯示）。
 
-### [v1.7.2] - 2026-11-17
-- **暫時停用聲音接收功能與麥克風常駐監聽 (Temporarily Disable Audio Reception / Always-On Mic)**：
-  - **聲音接收功能安全關閉（Microphone & VAD Muted）**：
-    - 依指示全域設定 `AUDIO_INPUT_DISABLED = true`，徹底關閉前端常駐麥克風監聽與語音活動偵測（VAD）。
-    - 封鎖 `startMic` 與對話結束（`conversation-chain-end`）時的自動喚醒麥克風行為，徹底杜絕背景雜音誤觸或持續占用麥克風硬體。
-    - 網頁版輸入列麥克風按鈕切換為靜音狀態標籤（`BsMicMuteFill`），點擊時給予貼心 Toast 提示引導文字交流。
-  - **愛蜜莉雅語音說話功能 100% 完整保留（Emilia TTS Speech Fully Preserved）**：
-    - 嚴格隔離輸入端與輸出端：使用者透過文字輸入框或快捷氣泡發送訊息時，愛蜜莉雅依然能即時生成 Fish Audio 原聲語音、驅動平滑嘴形動畫、展現動態頻譜與雙語對話字幕。
+---
 
-### [v1.7.1] - 2026-11-17
-- **全端效能與流暢度深度優化 (Full-Stack Performance & Latency Optimization)**：
-  - **前端 React 渲染效能升級（隔離狀態避免整頁高頻重繪）**：
-    - 將對話框文字打字機邏輯抽離為獨立的 `EmiliaDialogueCard` Memoized 元件。
-    - 徹底根除先前打字機每 18ms 觸發一次全域 `WebView`（包含背景、Live2D 舞台、頂部列、輸入列）整頁重渲染的問題，CPU 使用率降低 80% 以上，Live2D 動態維持極致 60 FPS 滿幀。
-  - **Vite 多代碼塊分包（Multi-Chunk Code Splitting）**：
-    - 設定 Rollup `manualChunks` 將原本單一 1.7 MB 的肥大 `main.js` 拆分為 `vendor-react`、`vendor-ui`、`vendor-ai`、`vendor-libs` 與 `main.js`。
-    - `main.js` 核心體積由 **1,697 kB 暴跌至 310 kB（縮減 81.7%）**，搭配 `modulepreload` 與 HTTP/2 平行載入，首屏與資源載入速度提升近 2 倍。
-  - **翻譯 API 呼叫 120ms 防抖（Debounce）**：
-    - 在字幕串流抵達時加入 120ms 防抖機制，避免單一語句在串流階段重複向後端發送多次無效翻譯請求。
-  - **後端 `/api/translate` 非同步連線池與零阻塞優化 (AsyncOpenAI Pooling & O(1) Cache)**：
-    - 將原本每次請求重複建立 `OpenAI` 同步實例並阻塞 Uvicorn 事件循環的設計，徹底改為全域單例長駐 `AsyncOpenAI` 連線池。
-    - 配合 `asyncio.wait_for` 與記憶體 LRU 快取，常見語句命中時間僅需 **2.4 毫秒**，未命中時亦 100% 釋放事件循環，不干擾 WebSocket 與音訊串流。
-  - **語音合成延遲減半（Fish Audio Balanced Streaming）**：
-    - 將 TTS 合成延遲模式由 `normal` 切換為 `balanced`，在維持高品質高橋李依聲線的同時，將語音生成排隊時間縮減達 50%。
+## 💖 好感度羈絆系統 3.0
 
-### [v1.7.0] - 2026-11-17
-- **網頁版對話框頂級動漫視覺昇華、日文主大字/中文副小字排版與說話順暢度大幅優化 (Web Dialogue UI Overhaul & Speech Smoothness System)**：
-  - **日文主體大字 × 繁體中文副字幕層次重構 (Japanese-First Dual-Language Hierarchy)**：
-    - **上方主要大字體 (Top Focus)**：愛蜜莉雅的原聲日文設為主要大字 (`20px ~ 23px`)，採用俐落高清晰度動漫字體族群 (`Hiragino Kaku Gothic ProN`, `Meiryo`, `Noto Sans JP`)，搭配 600 字重與柔和文字投影 (`text-shadow`)，完美還原日系視覺小說經典立體沉浸感。
-    - **下方優雅副字幕 (Bottom Subtitle)**：即時翻譯的繁體中文作為副標小字 (`14px ~ 15px`)，以淡紫丁香色調 (`purple.100`) 呈現在纖細的紫水晶毛玻璃分割線下方，附帶圓角 `[中文]` 標籤，層次分明且不喧賓奪主。
-  - **說話順暢度全面優化：物理阻尼嘴形平滑化 (Physically Damped Live2D Lip Sync)**：
-    - 徹底根除 Live2D 嘴形在 60 FPS 下因音訊瞬態 RMS 波動產生的劇烈抽搐抖動（震動式開閉問題）。
-    - 在 WebSDK `LAppModel` 底層引入**非對稱指數低通平滑濾波器 (Exponential LERP Low-Pass Filter)**：
-      - 起音 (Attack)：以高響應物理阻尼速率 (`20.0`) 迅速張口，跟隨發音音節。
-      - 釋音 (Decay)：以柔和漸收物理阻尼速率 (`12.0`) 平滑閉合，消除音節間急墜抽動。
-      - 門檻降噪 (Noise Floor Gate)：抑制底噪微抖，並將增益倍率由原本失真剪切的 `4.0` 修正為自然口型係數 `1.0`，呈現栩栩如生的高品質動漫語音口型銜接。
-  - **說話順暢度全面優化：打字機平滑推進流 (Progressive Typewriter Streaming)**：
-    - 語音回覆不再瞬間突兀全句跳出，改為隨說話節奏逐字流暢推進（每字 18~28ms 平滑湧現），並自帶呼吸脈衝打字光標 (`▌`)。
-    - 支援「點擊立即展開」機制（使用者點擊對話框即可立刻顯示全句，操作體驗如同視覺小說遊戲）。
-  - **動態 4-Bar 語音頻譜等化器 (Voice Soundwave Visualizer)**：
-    - 當愛蜜莉雅開口說話時，對話框頂部狀態列動態綻放 4 條上下起伏跳動的紫水晶光柱語音等化器 (`emilia-soundwave`)，隨語音律動起伏，提供立體直觀的對話生命力反饋。
-  - **即時翻譯平滑淡入滑上動效 (Smooth Subtitle Transition)**：
-    - 繁體中文翻譯生成後，採用 `@keyframes emiliaSubtitleSlideIn` 物理曲線柔和滑上淡入，消除文字瞬間突兀跳變。
+分數起始為 **0**，每 **+350** 於 Lv.8 後點亮一顆星 ★。依部位觸控解鎖，具短時間疲勞扣減、每日效率軟上限與心情（PAD）加成，低落時安撫有「破涕為笑」增益。
 
-### [v1.6.4] - 2026-11-17
-- **桌面寵物端渲染穩定化與雙啟動腳本支援 (Desktop Pet Rendering Stabilization & Launchers)**：
-  - **React 渲染錯誤修復 (ReferenceError Fix)**：修復 `input-subtitle.tsx` 中遺漏引入的 `useRef`，恢復桌寵模式下 React 元件樹的穩定渲染與輸入對話框正常運作。
-  - **Live2D 高畫質視窗擷取支援 (`preserveDrawingBuffer: true`)**：在 WebGL 初始化時啟用 `preserveDrawingBuffer`，確保原生 Electron 視窗擷取（`webContents.capturePage()`）與 Canvas 離屏繪製能 100% 完整捕捉愛蜜莉雅精細立繪與透明背景。
-  - **雙啟動腳本支援與 npm 腳本整合**：
-    - 新增 `run_desktop_pet.sh` 軟連結指向 `run_pet.sh`，使用者無論執行 `./run_pet.sh` 或 `./run_desktop_pet.sh` 均可一鍵無縫喚醒桌面寵物。
-    - `package.json` 正式登錄 `"pet": "electron --no-sandbox pet-main.cjs"`，相容於 Linux 各種桌面環境直接啟動。
+| 等級 | 名稱 | 門檻 | 解鎖 |
+|---|---|---|---|
+| Lv.1 | 初識同伴 | 0 | 基礎日常對話、撫摸銀髮、戳戳臉頰、番茄鐘 |
+| Lv.2 | 信任夥伴 | 80 | 拉衣角／輕拍肩、害羞微表情、天然呆碎碎念 |
+| Lv.3 | 知心守護 | 220 | 雙手輕捧臉頰、破涕為笑、AI 記憶日記 |
+| Lv.4 | 專屬戀人 (EMT) | 450 | 專屬愛稱、十指緊扣牽手、輕捏臉頰、吃醋哄她、約會小劇場、戀人情書 |
+| Lv.5 | 精靈的契約者 | 800 | 親手餵食點心、契約水晶心跳共鳴、全主題約會劇場、紀念卡 |
+| Lv.6 | 月下花海的誓約 | 1300 | 背後環抱／靠肩依偎、耳畔早晚安與哄睡語音、真心話檔案 |
+| Lv.7 | 銀白之戀 · 冰結羈絆 | 2000 | 摸下巴逗笑、純愛回憶語音、吃醋秒變害羞 |
+| Lv.8 | 永恆的半身 | 2800 | 主動索抱／索吻、無限星級、永恆誓約 |
 
-### [v1.6.3] - 2026-11-17
-- **工具選單頂級動漫毛玻璃重構 (Anime Glassmorphism Tool Menu & Console Deck Redesign)**：
-  - **桌面寵物端靈動控制台 (`PetView` / `emilia_biometric_enhancer.js`)**：
-    - **折疊狀態（預設純淨相伴）**：徹底移除原本橫跨愛蜜莉雅頭頂的粗糙長條按鈕列。預設優雅收攏為右上角懸浮的**「晶瑩紫水晶小吊墜」**，自帶溫柔上下漂浮呼吸光暈（`filter: drop-shadow`），還原 100% 乾淨無遮擋的桌面相伴體驗。
-    - **展開狀態（動漫毛玻璃控制台 Console Deck）**：點擊吊墜時伴隨清脆空靈的水晶風鈴音效（`playFairyChime`），平滑綻放展開為 330px 精緻動漫卡片：
-      - 🌸 **頂部控制台標題**：愛蜜莉雅靈動伴侶控制台（EMILIA COMPANION CONSOLE）與極簡圓形關閉按鈕（✕）。
-      - 👗 **造型換裝專區**：獨立卡片清晰指示「當前造型」，並提供一鍵「切換 ⇄」直達 4星經典大衣 / 4星夏日泳裝。
-      - 🪄 **靈動伴侶 2×3 矩陣**：完全剔除舊版生硬的 `|` 分隔線與左右滾動箭頭，重新編排為高對比毛玻璃按鈕矩陣：
-        - 🎵 **治癒 BGM**：Re:0 經典水晶音樂播放/暫停與切換下一首（⏭️）。
-        - 🍅 **番茄鐘專注**：25 分鐘專注陪伴倒數。
-        - 👁️ **視覺感知**：即時螢幕智能觀測。
-        - 🎙️ **語音喚醒**：喚醒詞（「愛蜜莉雅」/「EMT」）開關切換。
-        - 📖 **冒險日記**：開啟每日冒險與回憶紀錄。
-        - 💖 **好感羈絆**：即時動態呈現當前羈絆階級（例如 Lv.4 專屬戀人）。
-      - 🐾 **底部快速通道**：切換桌寵/視窗模式與 Live2D 調校室快捷入口。
-  - **網頁版專屬控制台抽屜 (`WebToolMenu.tsx`)**：
-    - 徹底替換原本生硬擁擠的原版開發者側欄，打造全客製化 `WebToolMenu`：
-      - 🌸 **精緻標題列**：毛玻璃紫韻質感徽章、愛蜜莉雅專屬標題與優雅關閉鈕。
-      - 👗 **4星衣櫥造型卡片**：並列雙卡片視覺化呈現「4星 經典大衣 (冰之精靈)」與「4星 夏日泳裝 (沁涼夏日)」，自帶當前穿著高亮光環與打勾標章。
-      - 💬 **對話與歷史管理**：一鍵開啟新話題、回顧歷史對話抽屜。
-      - 🪄 **伴侶輔助工具**：Re:0 治癒音樂盒、螢幕畫面視覺感知。
-      - 🖥️ **模式切換**：直覺切換至獨立桌寵視窗。
-      - ⚙️ **系統進階設定**：呼叫完整的 TTS/LLM/ASR 設定面板。
+- 前後端門檻一致（`emilia_biometric_enhancer.js` 與 `discord_bot.py`），並由 Soul-Link 以較新 `updatedAt` 為準同步。
+- 觸控部位：頭、肩、臉頰、手、嘴、水晶、擁抱、耳語、下巴；未達等級顯示 🔒 解鎖提示。
 
-### [v1.6.2] - 2026-11-17
-- **對話框放大與日文即時繁體中文對照 (Enlarged Dialogue Card & Real-Time Translation)**：
-  - **對話框大幅放大 (Generous Visual Area)**：
-    - 寬度擴充至 780px (`width: min(94vw, 780px)`)，內縮間距大幅增加至 `px: 20~28px, py: 16~20px`，升級為 24px 圓角半透明毛玻璃質感。
-    - 字體清晰度翻倍提升，主要中文翻譯採用 `18px ~ 21px` 大字體與 1.55 倍舒適行高，徹底告別手機或遠端觀看費力的問題。
-  - **日文即時自動翻譯為繁體中文 (Real-time Japanese to Traditional Chinese)**：
-    - 後端新增 `/api/translate` 極速翻譯 API 端點，結合 Groq 雲端推理與記憶體快取池（重複句 <1ms 極速秒回），專屬調校貼合《Re:0》愛蜜莉雅溫柔少女風格的台灣繁體中文翻譯。
-    - 前端雙軌即時翻譯管線：
-      1. 優先辨識與分離 LLM 自帶的括號中文翻譯。
-      2. 若收到純日語原聲，自動向 `/api/translate` 請求即時繁中翻譯。
-      3. 採用「**上層：清晰繁體中文翻譯（主要閱讀焦點）**」+「**下層：日文原句對照（保留動漫原汁原味）**」雙層架構，並標註 `中日即時雙語` 徽章。
-    - 桌面寵物端（`InputSubtitle`）同步實裝中日雙語自動解析與對照顯示。
+---
 
-### [v1.6.1] - 2026-11-17
-- **手機端網頁版頂級 UI 優化 (Mobile Web Responsive Optimization)**：
-  - **角色絕對置中固定 (Strict Center Pinning)**：
-    - 網頁版（`WebView`）徹底固定艾蜜莉雅於螢幕正中央（`x: 0.0`），舞台畫布鋪滿全視窗（`100vw × 100dvh`）。
-    - 移除拖曳偏移與舊有座標快取，滑鼠或手機觸控不會將角色拉扯離位，同時完整保留點擊頭部摸頭反應（TapHead）與身體互動動作（TapBody）。
-  - **動態安全區與防彈性回彈 (100dvh & Safe Area)**：
-    - 採用 `100dvh` (Dynamic Viewport Height) 與 `env(safe-area-inset-bottom)`，徹底根治手機 Safari / Chrome 網址列伸縮造成的版面跳動與 iPhone 底部橫條遮擋問題。
-    - 啟用 `overscroll-behavior: none`，滑動對話框時不會引發全頁橡皮筋滾動。
-  - **抽屜式側邊欄 (Slide-over Drawer for Settings)**：
-    - 移除手機端原本破壞比例的常駐大側欄，改為頂部懸浮毛玻璃按鈕觸發的滑出式抽屜面板，設定完成隨時收起，主畫面 100% 留給艾蜜莉雅。
-  - **懸浮單手拇指操作台 (Floating Thumb-Zone Console)**：
-    - **毛玻璃懸浮對話氣泡**：浮動於角色下方，支援打字機動效與角色名徽章。
-    - **快捷互動提示詞膠囊**：提供橫向滑動的快捷標籤（「🌸 今天過得好嗎？」、「✨ 陪我聊聊天」、「🐾 摸摸頭」、「🪄 教我異世界魔法」），單擊直達。
-    - **整合式懸浮輸入膠囊**：包含呼吸燈語音麥克風切換大鈕、文字輸入框與即時打斷/發送按鈕。
-  - **頂部懸浮捷徑列**：
-    - 整合極簡狀態呼吸指示燈（綠燈已連線 / 紅燈重連）與一鍵換裝捷徑（經典大衣 ⇄ 夏日泳裝）。
+## 🔌 後端 API 一覽
 
-### [v1.6.0] - 2026-11-17
-- **網頁版與桌寵全面解耦獨立 (Decoupled Web and Pet Architecture)**：
-  - **模組化分工重構**：將過往混合於同一組件與全域 CSS 的架構徹底拆分為兩個獨立模組：
-    - `src/renderer/src/pet/`（`PetView.tsx` & `pet.css`）：純淨桌面寵物專屬，固定於 440x700 緊湊視窗、100% 透明無邊框、精準黃金立繪比例與原生視窗拖曳，完全不受網頁版樣式污染。
-    - `src/renderer/src/web/`（`WebView.tsx` & `web.css`）：大螢幕沉浸式網頁版專屬，完整保留左側功能面板（模型/TTS/Prompt/設定）、動態背景壁紙、沉浸式字幕區與底部輸入控制台，專供後續網頁端功能特別優化。
-  - **智慧情境路由切換**：
-    - Electron 桌面客戶端（或帶有 `?mode=pet` 參數）預設精準加載 `PetView`。
-    - 標準網頁瀏覽器造訪（`http://localhost:12393/` 或 `?mode=web`）預設自動加載 `WebView`。
-    - 側邊欄整合一鍵雙向切換選單（Web Mode / Pet Mode）。
-  - **全域 CSS 樣式隔離**：移除強制全域透明背景，透過 `pet-mode` 與 `web-mode` 獨立作用域，確保網頁版壁紙主題與桌寵透明穿透各自獨立運作。
+| 端點 | 用途 |
+|---|---|
+| `GET /api/capture-screen` | 螢幕感知（僅限本機／區網，外網回 403） |
+| `GET /api/desktop-status` | 閒置時間、運行應用、焦點視窗 |
+| `POST /api/translate` | 日→繁中翻譯（AsyncOpenAI＋LRU） |
+| `GET/POST /api/companion-state` | Soul-Link 同步 |
+| `GET /api/network-info` | 區網 IP／Tunnel 網址 |
+| `GET /api/internet-briefing` | 晨間簡報與天氣 |
+| `GET /api/music-search`、`/api/music-stream` | 全網搜歌與同源串流代理 |
+| `POST /api/generate-diary` | 日記／情書生成 |
+| `GET/POST /api/discord-config` | Discord Bot 設定與啟停 |
+| `/web-tool`、`/live2d-models/info`、`POST /asr` | 原生 Open-LLM-VTuber 路由 |
 
-### [v1.5.2] - 2026-11-17
-- **桌寵黃金比例精準校正 (Refined Proportions from User Reference)**：
-  - 依照使用者提供的實機桌面截圖基準，徹底修復先前模型面部過度放大、比例跑掉的問題。
-  - 將 Live2D 佈局寬度調校至 `0.41`、垂直位置配置於 `y: 0.28`，愛蜜莉雅全身立繪精準重現約佔螢幕 26% 的經典修長桌寵比例（高度約 260~300px），頭身比例優美端莊。
-  - 愛蜜莉雅自然佇立於底部對話卡片正上方，雙足與輸入框上緣完美銜接，頭頂與頂部 HUD 留有舒適呼吸空間，視覺統一協調。
-- **底部對話卡片精緻收斂**：
-  - 輸入框寬度最佳化為 `380px`（`maxW: calc(100vw - 20px)`），完美貼齊桌寵下緣，無論在小視窗或螢幕邊角均精巧不突兀。
-- **桌面截圖與視窗捕捉增強**：
-  - 於 Electron 端支援 `desktopCapturer` 桌面擷取與螢幕驗證通道。
+---
 
-### [v1.5.1] - 2026-11-17
-- **獨立緊湊桌寵小視窗 (440x700 剛好裝下愛蜜莉雅)**：
-  - 徹底告別全螢幕大畫布，將桌寵前端改為 `440x700` 的精緻無邊框透明視窗，剛剛好完整容納愛蜜莉雅全身立繪與底部懸浮對話卡片。
-- **電腦桌面左下角預設定位 (Desktop Bottom-Left Anchor)**：
-  - 視窗啟動初始座標精準配置於電腦螢幕左下角（螢幕左側向內縮 40px、貼齊工作區底部上方），不遮擋桌面中央或右側主要工作區。
-  - 支援 `pet_bounds.json` 本機座標持久化，手動拖曳至任意位置後自動保存，重啟立刻復位。
-- **視窗級自由拖曳 (Native Window Dragging)**：
-  - 透過 Electron IPC (`pet-drag-start`, `pet-drag-move`, `pet-drag-end`) 實現視窗級拖曳，按住角色或視窗任意區域即可平滑拖動整個視窗至電腦桌面任何角落，甚至跨雙螢幕自由穿梭。
-- **模型完美居中與版面黃金適配**：
-  - 模型原生座標配置為水平正中心（`x: 0.0`），立繪由頭頂至下身黃金填滿視窗，底部對話輸入卡片貼底收斂（`bottom: 24px`，寬 400px），精緻不擁擠。
+## 🔐 設定與資安
 
-### [v1.5.0] - 2026-11-17
-- **100% 全透明網頁背景 (Transparent Web Background)**：
-  - 徹底移除 `html:not(.electron) body` 的暗紫色漸層背景，全站強制套用 `background: transparent !important` 與 `background-color: transparent !important`，無論在 Web 端或 Electron 穿透環境均呈現 100% 透明。
-- **預設預測左下角定位 (Default Bottom-Left Positioning)**：
-  - 在 `Character.model3.json` 原生佈局設定與前端掛載邏輯中將愛蜜莉雅預設初始座標配置於左下角（`Layout: { width: 1.05, x: -0.95, y: -0.52 }`），使桌寵自然依附在螢幕左下方，不阻擋中央工作視窗。
-  - 加入 `localStorage` 座標持久化機制（`emilia_pet_pos_x`, `emilia_pet_pos_y`），使用者自由拖動後即刻記憶，刷新或重啟自動還原最新位置。
-- **適中黃金桌寵比例 (Proportional Moderate Scaling)**：
-  - 修正原先 `Layout.width: 2.0` 疊加前端雙倍縮放導致角色過大、佔滿螢幕且超出視窗的異常問題。
-  - 將模型佈局寬度調校為 `1.05`，`model_dict.json` 的 `kScale` 設為 `0.26`，前端自適應換算為約 52% 視窗高度的最適桌寵比例。
-- **絲滑全域滑鼠自由拖曳 (Smooth Global Mouse Dragging)**：
-  - 重構 `useLive2DModel.ts` 拖曳架構，結合模型邊界距離近接判定（`isNearModel`），點擊角色軀幹或週邊均可 100% 靈敏抓取。
-  - 升級為全域 `document` Capture 級滑鼠移動與釋放監聽，徹底解決快速拖動時 React 容器失焦與掉落問題，拖曳反應極致絲滑穩定。
+- **Groq 金鑰**：環境變數 `GROQ_API_KEY` 或 `conf.yaml` 的 `groq_llm.llm_api_key`，程式碼不含硬編碼。
+- **角色設定**：`Open-LLM-VTuber/characters/emilia_4star*.yaml`（大衣、泳裝、GPT-120B、LLaMA-70B 變體，`conf_uid` 一致）。
+- **伺服器**：預設 `0.0.0.0:12393`，僅本機請改為 `127.0.0.1`。
+- `.gitignore` 排除 `.venv/`、`node_modules/`、`dist/`、`out/`、`logs/`、`cache/` 與大型模型。
 
-### [v1.4.0] - 2026-11-17
-- **徹底清除走路與移動功能 (原地陪伴模式)**：
-  - 徹底清除 `emilia_biometric_enhancer.js` 中的漫步引擎、位移動畫、地圖導航、桌椅抱枕等動態道具生成及打瞌睡位移代碼（共清除逾 1,360 行移動邏輯與冗餘樣式）。
-  - 清理所有移動、漫步、起立、坐下相關按鈕監聽器與事件綁定，介面與選單完全不出現任何移動選項。
-  - 愛蜜莉雅嚴格固定於原地安靜陪伴，完整保留 Live2D 自然呼吸微動作、視線微動反饋、摸頭反應、即時情緒動作、一鍵換裝、語音喚醒與治癒 BGM。
+---
 
-### [v1.3.0] - 2026-11-17
-- **UI 優化**：全面改為純淨桌寵聊天框模式（`mode: 'pet'`），移除網頁版預設顯示的側邊欄、設定面板與深色背景，回歸輕巧靈動的懸浮卡片。
-- **動態尋址**：`websocket-context` 支援動態依據目前 Origin 自動選用 `ws:` / `wss:`，完美相容 Cloudflare 外網通道與區網 IP。
-- **Git 與規範實裝**：建立專案硬性規範，後續每次更新皆強制執行 Git 紀錄與 README 更新。
+## 📜 版本紀錄摘要
 
-### [v1.2.0] - 2026-11-17
-- **功能加回**：完整恢復 1、2、3、4、6 號功能（透明桌寵、桌面觀測、30m 待機插話、Groq 備用容錯池、頂部滑動 HUD）。
-- **完全排除**：依使用者指示排除底部雙實體漫遊系統（功能 7）。
+> 詳細內容請見 [docs/CHANGELOG.md](docs/CHANGELOG.md)。
+
+### [v2.2.0] - 2026-11-18（本次整合）
+- **好感度系統 3.0**：起始分數改 0；門檻調為 80/220/450/800/1300/2000/2800；星級間距 250→350；Lv.3 更名「知心守護」；新增肩、嘴、擁抱、耳語、下巴等觸控部位與逐級解鎖／🔒 提示；疲勞扣減、每日軟上限、PAD 心情加成與破涕為笑增益；後端 `intimacy_map` 同步加入各級觸控反應語氣。
+- **Soul-Link 合併修正**：伺服器 `updatedAt` 較新時以伺服器為準，避免舊本機分數覆寫。
+- **桌寵操作改版**：左鍵專供 Live2D 觸控；右鍵／中鍵／Alt＋左鍵拖曳移視窗；右鍵選單改由 IPC 觸發；`__emiliaHandledPartTap` 避免與原生 TapBody 重複觸發；模型固定 `y=0.10`、`#emilia-pet-ui-layer` 全螢幕穿透層。
+- **渲染穩定化**：`LAppPal` 以 `performance.now()` 並限制 delta；Idle 動作循環；嘴形參數平滑回正。
+- **語言防線**：系統提示末端新增日文發言絕對規則。
+- **文件整合**：README 重新編排為功能／架構／操作／API 結構，完整歷史移至 `docs/CHANGELOG.md`。
+
+| 版本 | 重點 |
+|---|---|
+| v2.1.0 | 全網音樂串流點播、1024-FFT 旋律追蹤、六段式編舞、線上點唱機 |
+| v2.0.0 | Omni-Net 聯網中樞、Soul-Link／PWA／QR、Discord Bot、多聲部合成器節奏熱舞 |
+| v1.10.0 | 接續歷史聊天、統一造型記憶池、`emiliaHistoryBridge` |
+| v1.9.1 | 智慧桌面觀察、3 分鐘主動守護、意圖看螢幕、靜默記憶隔離 |
+| v1.9.0 | 資安白名單與金鑰外置、Lazy ASR、雙語 0ms 解析、`emiliaBridge`、分包 |
+| v1.8.0 | 全棧效能重構（零阻塞事件循環、$O(|C|)$ 記憶、PCM 向量化） |
+| v1.7.2 | 停用麥克風接收，保留 TTS |
+| v1.7.1 | 全端效能優化、翻譯防抖、AsyncOpenAI 池、TTS balanced |
+| v1.7.0 | 日文主字幕／繁中副字幕、打字機、等化器、阻尼嘴形 |
+| v1.6.4 | 桌寵渲染修復、`preserveDrawingBuffer`、雙啟動腳本 |
+| v1.6.3 | 動漫毛玻璃控制台與 `WebToolMenu` |
+| v1.6.2 | 放大對話框、`/api/translate` 即時翻譯 |
+| v1.6.1 | 手機網頁優化、角色置中 |
+| v1.6.0 | 桌寵 / 網頁解耦 |
+| v1.5.2 | 黃金比例校正 |
+| v1.5.1 | 440×700 視窗、左下角定位、視窗級拖曳 |
+| v1.5.0 | 全透明背景、適中比例、平滑拖曳 |
+| v1.4.0 | 移除走路／移動機制，原地陪伴 |
+| v1.3.0 | 純淨桌寵聊天框、動態 ws/wss、版本規範 |
+| v1.2.0 | 恢復透明桌寵、桌面觀測、30 分鐘待機插話、Groq 容錯池、HUD |
 
 ---
 
 ## 📌 開發維護硬性規範
-所有後續維護此專案的 Agent 或開發者，必須嚴格遵守以下兩點：
-1. **每次版本更新後，必須進行完整的 Git Commit 紀錄。**
-2. **每次版本更新後，必須同步更新此 README.md 中的版本紀錄。**
+
+1. 每次功能調整／修正／重構／版本更新，**必須完整 Git Commit**（主目錄與相關子專案，訊息如 `feat(ui): ...`）。
+2. 每次更新**必須同步更新本 README 與 `docs/CHANGELOG.md`**（日期、版本、功能、驗證狀態）。
+3. **介面純粹性原則**：桌寵與網頁預設一律為「Live2D 角色 ＋ 懸浮 InputSubtitle 卡片 ＋ 頂部 HUD」，不得預設載入側邊欄、全螢幕儀表板或鏡頭／螢幕分頁。
