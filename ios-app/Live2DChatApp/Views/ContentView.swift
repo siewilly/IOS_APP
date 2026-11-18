@@ -5,12 +5,17 @@ public struct ContentView: View {
     @StateObject private var networkService = ChatNetworkService.shared
     @StateObject private var lipSyncManager = NativeAudioLipSyncManager.shared
     @StateObject private var bridgeController = Live2DBridgeController()
+    @StateObject private var jukebox = JukeboxManager.shared
+    @StateObject private var intimacy = IntimacyManager.shared
     @ObservedObject private var authService = AuthService.shared
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var inputText: String = ""
     @State private var isSettingsPresented: Bool = false
     @State private var isAuthPresented: Bool = false
+    @State private var isControlCenterPresented: Bool = false
+    @State private var isPureImmersionMode: Bool = false
+    @State private var currentOutfit: String = "classic"
     @State private var touchToastText: String? = nil
     @State private var toastDismissTask: Task<Void, Never>? = nil
     @FocusState private var isInputFocused: Bool
@@ -50,19 +55,45 @@ public struct ContentView: View {
                 .transition(.opacity)
             }
 
-            // 3. Middle Layer: Floating translucent dialogue history
-            VStack(spacing: 0) {
-                topNavigationBar
-                    .padding(.top, 4)
+            // 3. Middle Layer: Floating translucent dialogue history & HUD
+            if !isPureImmersionMode {
+                VStack(spacing: 0) {
+                    topNavigationBar
+                        .padding(.top, 4)
 
-                Spacer()
+                    // Companion Floating Dialogue Card
+                    companionDialogueCard
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
 
-                messageHistorySection
-                    .frame(maxHeight: UIScreen.main.bounds.height * 0.45)
+                    Spacer()
 
-                bottomInputBar
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
+                    messageHistorySection
+                        .frame(maxHeight: UIScreen.main.bounds.height * 0.38)
+
+                    // Horizontal Scrolling Quick Chips
+                    quickChipsSection
+                        .padding(.bottom, 6)
+
+                    // Bottom Input Bar
+                    bottomInputBar
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            } else {
+                // Pure Immersion Mode overlay: minimal hint
+                VStack {
+                    Spacer()
+                    Text("🙈 純淨賞玩模式中 • 輕觸螢幕重現按鈕")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.white.opacity(0.65))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Capsule().fill(Color.black.opacity(0.45)))
+                        .padding(.bottom, 24)
+                }
+                .transition(.opacity)
             }
 
             // 4. Floating Touch Interaction Toast (摸頭/戳臉即時回饋)
@@ -85,6 +116,31 @@ public struct ContentView: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
                 .zIndex(10)
             }
+        }
+        .onTapGesture {
+            if isPureImmersionMode {
+                HapticManager.shared.light()
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isPureImmersionMode = false
+                }
+            }
+        }
+        .sheet(isPresented: $isControlCenterPresented) {
+            EmiliaControlCenterSheet(
+                jukebox: jukebox,
+                intimacy: intimacy,
+                bridgeController: bridgeController,
+                currentOutfit: $currentOutfit,
+                isPureImmersionMode: $isPureImmersionMode,
+                onSendPrompt: { prompt in
+                    handleSendPrompt(prompt)
+                },
+                onClose: {
+                    isControlCenterPresented = false
+                }
+            )
+            .presentationDetents([.fraction(0.70), .large])
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isSettingsPresented) {
             SettingsView(
@@ -124,11 +180,65 @@ public struct ContentView: View {
         }
     }
 
+    // MARK: - Companion Floating Dialogue Card
+    private var companionDialogueCard: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                HStack(spacing: 5) {
+                    Text("🌸")
+                    Text("\(intimacy.levelTitle) Lv.\(intimacy.level)")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color.pink.opacity(0.95))
+                    Text("• 親密度 \(Int(intimacy.progress * 100))%")
+                        .font(.system(size: 10))
+                        .foregroundColor(.white.opacity(0.6))
+                }
+                Spacer()
+                if jukebox.isPlaying {
+                    HStack(spacing: 4) {
+                        Image(systemName: "music.note")
+                            .font(.system(size: 10))
+                            .foregroundColor(Color.pink)
+                        Text(jukebox.currentTrack.title)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(Color.pink.opacity(0.9))
+                            .lineLimit(1)
+                    }
+                }
+            }
+
+            // Latest or default dialogue prompt
+            if let lastAiMsg = networkService.messages.last(where: { $0.sender == .ai }) {
+                Text(lastAiMsg.text)
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundColor(.white)
+                    .lineLimit(2)
+            } else {
+                Text("「嗯！今天也要一起加油喔，有任何想聊的隨時告訴我～」")
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundColor(.white)
+                    .lineLimit(2)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(red: 0.16, green: 0.11, blue: 0.28).opacity(0.85))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color(red: 0.75, green: 0.60, blue: 1.0).opacity(0.3), lineWidth: 1)
+                )
+        )
+        .shadow(color: Color.purple.opacity(0.2), radius: 8, x: 0, y: 3)
+    }
+
     // MARK: - Top Navigation Bar
     private var topNavigationBar: some View {
-        HStack {
-            // Status Pill
+        HStack(spacing: 8) {
+            // 1. Status Pill
             Button(action: {
+                HapticManager.shared.light()
                 if !networkService.isConnected {
                     reconnectServer()
                 }
@@ -138,58 +248,94 @@ public struct ContentView: View {
                         .fill(networkService.isConnected ? Color.green : Color.orange)
                         .frame(width: 8, height: 8)
                     Text(networkService.isConnected ? configManager.characterName : networkService.connectionStatusText)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.white)
                 }
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 11)
                 .padding(.vertical, 6)
                 .background(Color.black.opacity(0.45))
                 .clipShape(Capsule())
-                .overlay(
-                    Capsule()
-                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
-                )
+                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
             }
 
-            Spacer()
-
-            // User Profile / Auth Button
+            // 2. Weather Pill (Click to broadcast briefing)
             Button(action: {
-                isAuthPresented = true
+                HapticManager.shared.light()
+                handleSendPrompt("愛蜜莉雅，請為我播報今天的即時天氣與最新動漫科技簡報！")
             }) {
-                HStack(spacing: 5) {
-                    Image(systemName: "person.crop.circle.fill")
-                        .font(.system(size: 13))
-                    Text(authService.currentUser?.display_name ?? "登入")
+                HStack(spacing: 4) {
+                    Image(systemName: "sun.max.fill")
+                        .foregroundColor(.orange)
+                        .font(.system(size: 11))
+                    Text("台北 24°C")
                         .font(.system(size: 12, weight: .medium))
-                        .lineLimit(1)
+                        .foregroundColor(.white.opacity(0.9))
                 }
-                .foregroundColor(.white.opacity(0.9))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(Color.black.opacity(0.45))
                 .clipShape(Capsule())
-                .overlay(Circle().stroke(Color.clear, lineWidth: 0))
                 .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
             }
 
-            // Text-only Mode Toggle Button
+            Spacer()
+
+            // 3. 💎 Diamond Floating Action Button (Opens Control Center)
             Button(action: {
-                withAnimation(.easeInOut(duration: 0.25)) {
-                    configManager.isTextOnlyMode.toggle()
-                }
+                HapticManager.shared.medium()
+                isControlCenterPresented = true
             }) {
-                Image(systemName: configManager.isTextOnlyMode ? "bolt.slash.fill" : "bolt.fill")
+                Text("💎")
+                    .font(.system(size: 15))
+                    .frame(width: 34, height: 34)
+                    .background(
+                        LinearGradient(
+                            colors: [Color.purple.opacity(0.65), Color.pink.opacity(0.55)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(Color(red: 0.85, green: 0.70, blue: 1.0).opacity(0.6), lineWidth: 1.2))
+                    .shadow(color: Color.purple.opacity(0.5), radius: 6, x: 0, y: 2)
+            }
+
+            // 4. ✨ Quick Outfit Switcher
+            Button(action: {
+                HapticManager.shared.medium()
+                currentOutfit = (currentOutfit == "classic") ? "swimsuit" : "classic"
+                bridgeController.switchOutfit(currentOutfit)
+                touchToastText = (currentOutfit == "classic") ? "👗 已換上：4星 經典大衣" : "👙 已換上：4星 夏日泳裝"
+                dismissToastAfterDelay()
+            }) {
+                Image(systemName: "sparkles")
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(configManager.isTextOnlyMode ? .yellow : .white.opacity(0.8))
+                    .foregroundColor(currentOutfit == "swimsuit" ? .pink : Color(red: 0.85, green: 0.70, blue: 1.0))
                     .frame(width: 34, height: 34)
                     .background(Color.black.opacity(0.45))
                     .clipShape(Circle())
                     .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
             }
 
-            // Settings Button
+            // 5. 👁️ Pure Immersion Mode Toggle
             Button(action: {
+                HapticManager.shared.rigid()
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isPureImmersionMode = true
+                }
+            }) {
+                Image(systemName: "eye.fill")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(.white.opacity(0.85))
+                    .frame(width: 34, height: 34)
+                    .background(Color.black.opacity(0.45))
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
+            }
+
+            // 6. Settings Button
+            Button(action: {
+                HapticManager.shared.light()
                 isSettingsPresented = true
             }) {
                 Image(systemName: "gearshape.fill")
@@ -202,6 +348,79 @@ public struct ContentView: View {
             }
         }
         .padding(.horizontal, 16)
+    }
+
+    // MARK: - Horizontal Scrolling Quick Chips
+    private var quickChipsSection: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                // 1. Stay Alive Jukebox
+                chipButton(
+                    label: "🎵 點歌: Stay Alive",
+                    isActive: jukebox.isPlaying && jukebox.currentTrack.id == "stay_alive"
+                ) {
+                    jukebox.currentTrackIndex = 0
+                    jukebox.togglePlayPause()
+                    handleSendPrompt("愛蜜莉雅，請播放《Stay Alive》並伴隨著音樂優雅熱舞吧！")
+                }
+
+                // 2. Cycle Dance Style
+                chipButton(label: "💃 切換舞步: \(jukebox.currentDanceStyle.components(separatedBy: " ").last ?? "熱舞")") {
+                    jukebox.cycleDanceStyle()
+                    touchToastText = "💃 已切換舞步：\(jukebox.currentDanceStyle)"
+                    dismissToastAfterDelay()
+                }
+
+                // 3. Morning Briefing
+                chipButton(label: "☀️ 今日晨間簡報") {
+                    handleSendPrompt("愛蜜莉雅，請為我播報今天的即時天氣與最新動漫科技簡報！")
+                }
+
+                // 4. Outfit Switch
+                chipButton(label: currentOutfit == "classic" ? "👗 換裝: 夏日泳裝" : "✨ 換裝: 經典大衣") {
+                    currentOutfit = (currentOutfit == "classic") ? "swimsuit" : "classic"
+                    bridgeController.switchOutfit(currentOutfit)
+                    touchToastText = (currentOutfit == "classic") ? "👗 已換上：4星 經典大衣" : "👙 已換上：4星 夏日泳裝"
+                    dismissToastAfterDelay()
+                }
+
+                // 5. Pat Head
+                chipButton(label: "🐾 摸摸頭") {
+                    bridgeController.triggerMotion(group: "TapHead")
+                    bridgeController.setExpression("exp_01_subtle_smile")
+                    intimacy.recordInteraction(points: 0.03)
+                    touchToastText = "✋ 輕撫銀髮，愛蜜莉雅舒服地瞇起眼睛～"
+                    dismissToastAfterDelay()
+                }
+
+                // 6. Magic Lesson
+                chipButton(label: "🪄 魔法學習") {
+                    handleSendPrompt("愛蜜莉雅，可以教我微精靈的冰魔法嗎？")
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+    }
+
+    private func chipButton(label: String, isActive: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: {
+            HapticManager.shared.light()
+            action()
+        }) {
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(isActive ? .pink : Color(red: 0.90, green: 0.82, blue: 1.0))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(isActive ? Color.pink.opacity(0.25) : Color(red: 0.18, green: 0.13, blue: 0.32).opacity(0.85))
+                        .overlay(
+                            Capsule().stroke(isActive ? Color.pink : Color(red: 0.75, green: 0.60, blue: 1.0).opacity(0.25), lineWidth: 1)
+                        )
+                )
+                .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 1)
+        }
     }
 
     // MARK: - Message History
@@ -243,6 +462,7 @@ public struct ContentView: View {
             // If AI is thinking/speaking, provide quick interrupt action
             if networkService.isAiThinkingOrSpeaking {
                 Button(action: {
+                    HapticManager.shared.medium()
                     networkService.sendInterrupt()
                 }) {
                     Image(systemName: "stop.circle.fill")
@@ -278,14 +498,15 @@ public struct ContentView: View {
             .background(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(Color(red: 0.16, green: 0.13, blue: 0.28).opacity(0.85))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                    )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                )
             )
 
             // Send Button
             Button(action: {
+                HapticManager.shared.medium()
                 handleSendMessage()
             }) {
                 Image(systemName: "arrow.up.circle.fill")
@@ -328,21 +549,39 @@ public struct ContentView: View {
             }
         }
 
-        networkService.onAuthRequired = { [self] in
-            isAuthPresented = true
+        networkService.onAuthRequired = {
+            Task { @MainActor in
+                isAuthPresented = true
+            }
         }
 
-        bridgeController.onTouchReaction = { [self] area, text in
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+        bridgeController.onTouchReaction = { area, text in
+            Task { @MainActor in
+                if area == "crystal" {
+                    HapticManager.shared.rigid()
+                } else if area == "head" || area == "cheek" {
+                    HapticManager.shared.light()
+                } else {
+                    HapticManager.shared.medium()
+                }
+                intimacy.recordInteraction(points: 0.02)
                 touchToastText = text
+                dismissToastAfterDelay()
             }
-            toastDismissTask?.cancel()
-            toastDismissTask = Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 2_600_000_000)
-                if !Task.isCancelled {
-                    withAnimation(.easeOut(duration: 0.3)) {
-                        touchToastText = nil
-                    }
+        }
+
+        jukebox.onDanceTrigger = { motionGroup in
+            bridgeController.triggerMotion(group: motionGroup)
+        }
+    }
+
+    private func dismissToastAfterDelay() {
+        toastDismissTask?.cancel()
+        toastDismissTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_600_000_000)
+            if !Task.isCancelled {
+                withAnimation(.easeOut(duration: 0.3)) {
+                    touchToastText = nil
                 }
             }
         }
@@ -357,13 +596,20 @@ public struct ContentView: View {
         let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         inputText = ""
+        intimacy.recordInteraction(points: 0.02)
         networkService.sendMessage(trimmed)
+    }
+
+    private func handleSendPrompt(_ prompt: String) {
+        intimacy.recordInteraction(points: 0.02)
+        networkService.sendMessage(prompt)
     }
 
     private func handleScenePhaseChange(_ phase: ScenePhase) {
         switch phase {
         case .background, .inactive:
             lipSyncManager.stopAll()
+            jukebox.pause()
             bridgeController.setPaused(true)
         case .active:
             if !configManager.isTextOnlyMode {
