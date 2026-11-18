@@ -36,6 +36,10 @@ public final class JukeboxManager: NSObject, ObservableObject, AVAudioPlayerDele
     public var onTrackChanged: ((String) -> Void)?
     public var onDanceTrigger: ((String) -> Void)?
 
+    public var currentTrack: JukeboxTrack {
+        tracks[currentTrackIndex]
+    }
+
     public var displayTitle: String {
         if let online = currentOnlineTrack {
             return online.title

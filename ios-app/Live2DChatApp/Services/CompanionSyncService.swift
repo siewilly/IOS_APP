@@ -375,7 +375,7 @@ public final class CompanionSyncService: ObservableObject {
         guard let url = URL(string: "\(base)/api/internet-briefing?city=Taipei&limit=3") else { return }
 
         do {
-            let (data, response) = try await URLSession.shared.data(for: url)
+            let (data, response) = try await URLSession.shared.data(from: url)
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { return }
 
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -414,7 +414,7 @@ public final class CompanionSyncService: ObservableObject {
         guard let url = URL(string: "\(base)/api/music-search?q=\(encoded)") else { return [] }
 
         do {
-            let (data, response) = try await URLSession.shared.data(for: url)
+            let (data, response) = try await URLSession.shared.data(from: url)
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else { return [] }
 
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
