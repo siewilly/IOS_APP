@@ -46,6 +46,23 @@
 
 ## 📜 版本更新紀錄 (Version History / Changelog)
 
+### [v1.9.0] - 2026-11-18
+- **資安強化、資源按需載入、雙語無延遲解析與統一事件匯流排架構升級 (`Architecture, Security, Lazy ASR & Unified Bridge`)**：
+  - **1. 資安防護與金鑰外置化 (`server.py`)**：
+    - **`/api/capture-screen` 本機／區網白名單防護**：新增 `_is_local_or_lan_request`，嚴格驗證來源 IP 與 `CF-Connecting-IP` / `X-Forwarded-For` 標頭，拒絕外網穿透訪客呼叫截圖端點（回傳 HTTP 403）。
+    - **移除硬編碼 Groq API Key**：改由環境變數 `GROQ_API_KEY` 或 `conf.yaml`（`groq_llm.llm_api_key`）動態讀取密鑰。
+  - **2. 按需延遲載入 ASR 與零冗餘音訊負載 (`service_context.py` / `stream_audio.py`)**：
+    - **`LazyASREngine` 延遲初始化**：後端啟動時僅登錄輕量代理實例，待實際收到語音轉文字請求時才載入 `sherpa_onnx_asr` 模型，伺服器啟動時間由 4 秒以上降至約 **1 秒**並節省大量待機記憶體。
+    - **消除重複音量計算 (`prepare_audio_payload`)**：對於 `.wav` 音訊直接讀取位元組並設 `volumes = []`，略過後端 `pydub` 解碼與逐 20ms 切片計算（統一由前端 `LAppWavFileHandler` 讀取 WAV PCM 計算 RMS）。
+  - **3. 長期記憶非同步防抖落盤 (`local_memory_system.py`)**：
+    - `add_memory` 改透過 `threading.Timer`（2.0 秒防抖）＋ `atexit` 安全 `flush()` 寫入磁碟，對話回合不再阻塞於同步寫檔。
+  - **4. 多句括號雙語 0ms 解析與桌寵雙語層次統一 (`WebView.tsx` / `input-subtitle.tsx`)**：
+    - 新增共用 `parseBilingualText` 解析器，可精準拆解單句與多句混排括號翻譯（僅擷取含漢字且不含假名之括號內容），前後端同步支援於 **0ms** 內免二次呼叫翻譯端點。
+    - 同步升級桌面寵物端 `InputSubtitle` 排版與網頁版一致：**上方日文原聲大字 ＋ 下方繁體中文副字幕**。
+  - **5. 統一前端事件橋接 `window.emiliaBridge` 與安全分包 (`emilia_biometric_enhancer.js` / `WebToolMenu.tsx` / `vite.config.ts`)**：
+    - 以 `window.emiliaBridge` ＋ `emilia-bridge-update` 事件取代脆弱的 `document.getElementById(...).click()` 模擬點擊，於網頁端 `WebToolMenu` 補齊 **🍅 25分鐘番茄鐘專注**、**📖 冒險日記** 與 **BGM 即時播放狀態** 同步；網頁模式下將右上紫水晶吊墜下移至 `top: 64px` 避免與頂部列重疊。
+    - 調整 `vite.config.ts` `manualChunks` 僅獨立拆出無 React 依賴的 `vendor-ai`（578.55 kB）與 `vendor-utils`（71.66 kB），杜絕 Rollup CommonJS 循環依賴錯誤同時縮減主包體積。
+
 ### [v1.8.0] - 2026-11-18
 - **全棧極致效能架構重構與記憶體/I/O 瓶頸徹底清除 (Full-Stack Deep Performance & Zero-Blocking Optimization)**：
   - **1. 生物增強中介層效能突破 (`emilia_biometric_enhancer.js`)**：
