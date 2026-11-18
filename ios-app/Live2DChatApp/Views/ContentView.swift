@@ -243,19 +243,27 @@ public struct ContentView: View {
         lipSyncManager.bridgeController = bridgeController
 
         networkService.onAudioReceived = { [weak lipSyncManager] audioData, displayText, actions in
-            lipSyncManager?.enqueue(audioData: audioData, displayText: displayText, actions: actions)
+            Task { @MainActor in
+                lipSyncManager?.enqueue(audioData: audioData, displayText: displayText, actions: actions)
+            }
         }
 
         networkService.onExpression = { [weak bridgeController] exp in
-            bridgeController?.setExpression(exp)
+            Task { @MainActor in
+                bridgeController?.setExpression(exp)
+            }
         }
 
         networkService.onMotion = { [weak bridgeController] motion in
-            bridgeController?.triggerMotion(group: motion)
+            Task { @MainActor in
+                bridgeController?.triggerMotion(group: motion)
+            }
         }
 
         networkService.onInterrupt = { [weak lipSyncManager] in
-            lipSyncManager?.stopAll()
+            Task { @MainActor in
+                lipSyncManager?.stopAll()
+            }
         }
     }
 

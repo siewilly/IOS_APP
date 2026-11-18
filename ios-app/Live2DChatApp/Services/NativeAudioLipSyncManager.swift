@@ -2,6 +2,7 @@ import Foundation
 import AVFoundation
 import QuartzCore
 
+@MainActor
 public final class NativeAudioLipSyncManager: NSObject, ObservableObject, AVAudioPlayerDelegate {
     public static let shared = NativeAudioLipSyncManager()
 
@@ -48,9 +49,7 @@ public final class NativeAudioLipSyncManager: NSObject, ObservableObject, AVAudi
         guard !queue.isEmpty else {
             stopDisplayLink()
             bridgeController?.setMouthOpen(0.0)
-            DispatchQueue.main.async {
-                self.isPlaying = false
-            }
+            self.isPlaying = false
             return
         }
 
@@ -63,10 +62,7 @@ public final class NativeAudioLipSyncManager: NSObject, ObservableObject, AVAudi
             audioPlayer?.prepareToPlay()
             audioPlayer?.play()
 
-            DispatchQueue.main.async {
-                self.isPlaying = true
-            }
-
+            self.isPlaying = true
             startDisplayLink()
         } catch {
             print("[NativeAudioLipSyncManager] Audio playback error: \(error.localizedDescription)")
@@ -108,15 +104,19 @@ public final class NativeAudioLipSyncManager: NSObject, ObservableObject, AVAudi
     }
 
     // MARK: - AVAudioPlayerDelegate
-    public func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-        bridgeController?.setMouthOpen(0.0)
-        playNextInQueue()
+    nonisolated public func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        Task { @MainActor in
+            self.bridgeController?.setMouthOpen(0.0)
+            self.playNextInQueue()
+        }
     }
 
-    public func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
+    nonisolated public func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
         print("[NativeAudioLipSyncManager] Audio decode error: \(String(describing: error))")
-        bridgeController?.setMouthOpen(0.0)
-        playNextInQueue()
+        Task { @MainActor in
+            self.bridgeController?.setMouthOpen(0.0)
+            self.playNextInQueue()
+        }
     }
 
     /// Immediately stop all audio and cancel pending queue (e.g. user interruption or background transition)
@@ -126,8 +126,6 @@ public final class NativeAudioLipSyncManager: NSObject, ObservableObject, AVAudi
         audioPlayer = nil
         stopDisplayLink()
         bridgeController?.setMouthOpen(0.0)
-        DispatchQueue.main.async {
-            self.isPlaying = false
-        }
+        self.isPlaying = false
     }
 }

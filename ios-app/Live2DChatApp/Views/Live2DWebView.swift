@@ -106,7 +106,7 @@ public struct Live2DWebView: UIViewRepresentable {
 
         public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
             if message.name == "live2dReady" {
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     self.parent.controller.isEngineReady = true
                     print("[Live2DWebView] Live2D WebEngine report: Ready.")
                 }
