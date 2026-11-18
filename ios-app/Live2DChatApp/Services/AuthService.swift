@@ -167,4 +167,26 @@ public final class AuthService: ObservableObject {
         self.token = nil
         self.currentUser = nil
     }
+
+    public func fetchCurrentUser() async {
+        let base = getBaseURL()
+        guard let url = URL(string: "\(base)/api/auth/me") else { return }
+        var request = URLRequest(url: url)
+        if let token = self.token {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                let decoded = try JSONDecoder().decode(AuthResultResponse.self, from: data)
+                if let user = decoded.user {
+                    await MainActor.run {
+                        self.currentUser = user
+                    }
+                }
+            }
+        } catch {
+            print("[AuthService] fetchCurrentUser error:", error)
+        }
+    }
 }

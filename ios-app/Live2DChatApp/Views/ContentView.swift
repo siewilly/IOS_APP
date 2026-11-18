@@ -6,7 +6,8 @@ public struct ContentView: View {
     @StateObject private var lipSyncManager = NativeAudioLipSyncManager.shared
     @StateObject private var bridgeController = Live2DBridgeController()
     @StateObject private var jukebox = JukeboxManager.shared
-    @StateObject private var intimacy = IntimacyManager.shared
+    @StateObject private var companion = CompanionSyncService.shared
+    @StateObject private var pomodoro = PomodoroManager.shared
     @ObservedObject private var authService = AuthService.shared
 
     @Environment(\.scenePhase) private var scenePhase
@@ -14,6 +15,7 @@ public struct ContentView: View {
     @State private var isSettingsPresented: Bool = false
     @State private var isAuthPresented: Bool = false
     @State private var isControlCenterPresented: Bool = false
+    @State private var isHistoryPresented: Bool = false
     @State private var isPureImmersionMode: Bool = false
     @State private var currentOutfit: String = "classic"
     @State private var touchToastText: String? = nil
@@ -128,19 +130,32 @@ public struct ContentView: View {
         .sheet(isPresented: $isControlCenterPresented) {
             EmiliaControlCenterSheet(
                 jukebox: jukebox,
-                intimacy: intimacy,
+                companion: companion,
+                pomodoro: pomodoro,
+                authService: authService,
                 bridgeController: bridgeController,
                 currentOutfit: $currentOutfit,
                 isPureImmersionMode: $isPureImmersionMode,
                 onSendPrompt: { prompt in
                     handleSendPrompt(prompt)
                 },
+                onResetChat: {
+                    networkService.startNewChat()
+                },
+                onOpenHistory: {
+                    isHistoryPresented = true
+                },
                 onClose: {
                     isControlCenterPresented = false
                 }
             )
-            .presentationDetents([.fraction(0.70), .large])
+            .presentationDetents([.fraction(0.85), .large])
             .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $isHistoryPresented) {
+            HistorySheetView(networkService: networkService) {
+                isHistoryPresented = false
+            }
         }
         .sheet(isPresented: $isSettingsPresented) {
             SettingsView(
@@ -186,12 +201,15 @@ public struct ContentView: View {
             HStack {
                 HStack(spacing: 5) {
                     Text("🌸")
-                    Text("\(intimacy.levelTitle) Lv.\(intimacy.level)")
+                    Text("\(companion.levelIcon) Lv.\(companion.level) \(companion.levelName)")
                         .font(.system(size: 11, weight: .bold))
                         .foregroundColor(Color.pink.opacity(0.95))
-                    Text("• 親密度 \(Int(intimacy.progress * 100))%")
+                    Text("• 親密 \(Int(companion.progressToNextLevel * 100))%")
                         .font(.system(size: 10))
                         .foregroundColor(.white.opacity(0.6))
+                    Text("• \(companion.customPetName)")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(Color(red: 0.85, green: 0.70, blue: 1.0))
                 }
                 Spacer()
                 if jukebox.isPlaying {
@@ -199,7 +217,7 @@ public struct ContentView: View {
                         Image(systemName: "music.note")
                             .font(.system(size: 10))
                             .foregroundColor(Color.pink)
-                        Text(jukebox.currentTrack.title)
+                        Text(jukebox.displayTitle)
                             .font(.system(size: 10, weight: .medium))
                             .foregroundColor(Color.pink.opacity(0.9))
                             .lineLimit(1)
@@ -267,7 +285,7 @@ public struct ContentView: View {
                     Image(systemName: "sun.max.fill")
                         .foregroundColor(.orange)
                         .font(.system(size: 11))
-                    Text("台北 24°C")
+                    Text("\(companion.weather?.city ?? "台北") \(companion.weather?.temp.map { "\(Int($0))°C" } ?? "24°C")")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.white.opacity(0.9))
                 }
@@ -359,6 +377,7 @@ public struct ContentView: View {
                     label: "🎵 點歌: Stay Alive",
                     isActive: jukebox.isPlaying && jukebox.currentTrack.id == "stay_alive"
                 ) {
+                    jukebox.currentOnlineTrack = nil
                     jukebox.currentTrackIndex = 0
                     jukebox.togglePlayPause()
                     handleSendPrompt("愛蜜莉雅，請播放《Stay Alive》並伴隨著音樂優雅熱舞吧！")
@@ -388,7 +407,7 @@ public struct ContentView: View {
                 chipButton(label: "🐾 摸摸頭") {
                     bridgeController.triggerMotion(group: "TapHead")
                     bridgeController.setExpression("exp_01_subtle_smile")
-                    intimacy.recordInteraction(points: 0.03)
+                    companion.recordInteraction(points: 2)
                     touchToastText = "✋ 輕撫銀髮，愛蜜莉雅舒服地瞇起眼睛～"
                     dismissToastAfterDelay()
                 }
@@ -564,7 +583,7 @@ public struct ContentView: View {
                 } else {
                     HapticManager.shared.medium()
                 }
-                intimacy.recordInteraction(points: 0.02)
+                companion.recordInteraction(points: 1)
                 touchToastText = text
                 dismissToastAfterDelay()
             }
@@ -590,18 +609,23 @@ public struct ContentView: View {
     private func reconnectServer() {
         let wsURL = configManager.websocketURL
         networkService.connect(url: wsURL)
+        Task {
+            await companion.fetchCompanionState()
+            await companion.fetchBriefing()
+            await authService.fetchCurrentUser()
+        }
     }
 
     private func handleSendMessage() {
         let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         inputText = ""
-        intimacy.recordInteraction(points: 0.02)
+        companion.recordInteraction(points: 1)
         networkService.sendMessage(trimmed)
     }
 
     private func handleSendPrompt(_ prompt: String) {
-        intimacy.recordInteraction(points: 0.02)
+        companion.recordInteraction(points: 1)
         networkService.sendMessage(prompt)
     }
 

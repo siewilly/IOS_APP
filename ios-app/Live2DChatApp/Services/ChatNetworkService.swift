@@ -105,6 +105,14 @@ public final class ChatNetworkService: NSObject, ObservableObject, URLSessionWeb
         }
     }
 
+    public func startNewChat() {
+        sendInterrupt()
+        sendJSON(["type": "create-new-history"])
+        DispatchQueue.main.async {
+            self.messages.removeAll()
+        }
+    }
+
     private func sendHandshake() {
         sendJSON(["type": "fetch-configs"])
         sendJSON(["type": "fetch-history-list"])

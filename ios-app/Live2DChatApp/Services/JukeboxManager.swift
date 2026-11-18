@@ -21,6 +21,7 @@ public final class JukeboxManager: NSObject, ObservableObject, AVAudioPlayerDele
     ]
 
     @Published public var currentTrackIndex: Int = 0
+    @Published public var currentOnlineTrack: OnlineMusicTrack? = nil
     @Published public var isPlaying: Bool = false
     @Published public var danceStyles: [String] = [
         "💃 偶像重拍熱舞",
@@ -30,12 +31,23 @@ public final class JukeboxManager: NSObject, ObservableObject, AVAudioPlayerDele
     ]
     @Published public var currentDanceStyleIndex: Int = 0
 
-    private var audioPlayer: AVAudioPlayer?
-    public var onTrackChanged: ((JukeboxTrack) -> Void)?
+    private var localPlayer: AVAudioPlayer?
+    private var streamPlayer: AVPlayer?
+    public var onTrackChanged: ((String) -> Void)?
     public var onDanceTrigger: ((String) -> Void)?
 
-    public var currentTrack: JukeboxTrack {
-        tracks[currentTrackIndex]
+    public var displayTitle: String {
+        if let online = currentOnlineTrack {
+            return online.title
+        }
+        return tracks[currentTrackIndex].title
+    }
+
+    public var displayArtist: String {
+        if let online = currentOnlineTrack {
+            return online.artist
+        }
+        return tracks[currentTrackIndex].artist
     }
 
     public var currentDanceStyle: String {
@@ -60,12 +72,20 @@ public final class JukeboxManager: NSObject, ObservableObject, AVAudioPlayerDele
         if isPlaying {
             pause()
         } else {
-            playCurrent()
+            if currentOnlineTrack != nil {
+                resumeOnline()
+            } else {
+                playCurrent()
+            }
         }
     }
 
     public func playCurrent() {
-        let track = currentTrack
+        currentOnlineTrack = nil
+        streamPlayer?.pause()
+        streamPlayer = nil
+
+        let track = tracks[currentTrackIndex]
         guard let url = Bundle.main.url(forResource: track.fileName, withExtension: "m4a") ??
                         Bundle.main.url(forResource: track.fileName, withExtension: "mp3") else {
             print("[JukeboxManager] Track file not found: \(track.fileName)")
@@ -73,36 +93,67 @@ public final class JukeboxManager: NSObject, ObservableObject, AVAudioPlayerDele
         }
 
         do {
-            audioPlayer = try AVAudioPlayer(contentsOf: url)
-            audioPlayer?.delegate = self
-            audioPlayer?.numberOfLoops = -1 // Infinite loop until switched
-            audioPlayer?.volume = 0.85
-            audioPlayer?.prepareToPlay()
-            audioPlayer?.play()
+            localPlayer = try AVAudioPlayer(contentsOf: url)
+            localPlayer?.delegate = self
+            localPlayer?.numberOfLoops = -1
+            localPlayer?.volume = 0.85
+            localPlayer?.prepareToPlay()
+            localPlayer?.play()
             isPlaying = true
-            onTrackChanged?(track)
+            onTrackChanged?(track.title)
             triggerDanceStep()
         } catch {
             print("[JukeboxManager] Failed to play track: \(error)")
         }
     }
 
+    public func playOnlineTrack(_ track: OnlineMusicTrack) {
+        localPlayer?.stop()
+        localPlayer = nil
+
+        currentOnlineTrack = track
+        let base = ServerConfigManager.shared.serverBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        var streamUrlStr = track.stream_url ?? ""
+        if streamUrlStr.starts(with: "/") {
+            streamUrlStr = "\(base)\(streamUrlStr)"
+        }
+
+        guard let url = URL(string: streamUrlStr) else { return }
+        streamPlayer = AVPlayer(url: url)
+        streamPlayer?.volume = 0.85
+        streamPlayer?.play()
+        isPlaying = true
+        onTrackChanged?(track.title)
+        triggerDanceStep()
+    }
+
+    public func resumeOnline() {
+        streamPlayer?.play()
+        isPlaying = true
+        triggerDanceStep()
+    }
+
     public func pause() {
-        audioPlayer?.pause()
+        localPlayer?.pause()
+        streamPlayer?.pause()
         isPlaying = false
     }
 
     public func stop() {
-        audioPlayer?.stop()
+        localPlayer?.stop()
+        streamPlayer?.pause()
+        streamPlayer = nil
         isPlaying = false
     }
 
     public func nextTrack() {
+        currentOnlineTrack = nil
         currentTrackIndex = (currentTrackIndex + 1) % tracks.count
         playCurrent()
     }
 
     public func previousTrack() {
+        currentOnlineTrack = nil
         currentTrackIndex = (currentTrackIndex - 1 + tracks.count) % tracks.count
         playCurrent()
     }
