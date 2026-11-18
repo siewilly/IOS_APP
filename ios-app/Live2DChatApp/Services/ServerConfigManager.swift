@@ -37,10 +37,11 @@ public final class ServerConfigManager: ObservableObject {
     }
 
     public init() {
-        let savedURL = UserDefaults.standard.string(forKey: Keys.serverBaseURL) ?? "http://127.0.0.1:12393"
+        let savedURL = UserDefaults.standard.string(forKey: Keys.serverBaseURL) ?? "http://192.168.1.103:12393"
         let savedName = UserDefaults.standard.string(forKey: Keys.characterName) ?? "愛蜜莉雅 (Emilia)"
         let savedMode = UserDefaults.standard.bool(forKey: Keys.isTextOnlyMode)
         let savedRecents = UserDefaults.standard.stringArray(forKey: Keys.recentServers) ?? [
+            "http://192.168.1.103:12393",
             "http://127.0.0.1:12393",
             "https://xxxx.trycloudflare.com"
         ]

@@ -6,22 +6,32 @@
 (async function initLive2DRenderer() {
   const canvas = document.getElementById('canvas');
 
-  // 1. Mandatory low-power and resolution constraints
+  // 1. Configure high-precision Retina WebGL settings
+  if (window.PIXI && PIXI.settings) {
+    PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.LINEAR;
+    PIXI.settings.MIPMAP_TEXTURES = PIXI.MIPMAP_MODES.ON;
+    PIXI.settings.ROUND_PIXELS = false;
+    PIXI.settings.PRECISION_FRAGMENT = 'highp';
+  }
+
+  // Device pixel ratio: natively match iPhone 14/15 3x OLED screen for pristine crispness
+  const dpr = Math.min(Math.max(window.devicePixelRatio || 2, 2), 3);
+
   const app = new PIXI.Application({
     view: canvas,
     autoStart: true,
     transparent: true,
     backgroundAlpha: 0,
-    resolution: 1, // STRICTLY 1: Never use window.devicePixelRatio to prevent 9x pixel overhead
-    autoDensity: false,
-    antialias: false,
-    powerPreference: 'low-power',
+    resolution: dpr, // Ultra-sharp Retina native resolution
+    autoDensity: true,
+    antialias: true, // Smooth anti-aliased geometry and lines
+    powerPreference: 'high-performance',
     width: window.innerWidth || 390,
     height: window.innerHeight || 844,
   });
 
-  // 2. Dynamic frame rate throttling: 12 FPS idle vs 30 FPS active
-  const IDLE_FPS = 12;
+  // 2. Dynamic frame rate throttling: 15 FPS idle vs 30 FPS active (smooth & responsive)
+  const IDLE_FPS = 15;
   const ACTIVE_FPS = 30;
   app.ticker.maxFPS = IDLE_FPS;
 
@@ -51,6 +61,8 @@
     });
 
     app.stage.addChild(live2dModel);
+    window.__model = live2dModel;
+    window.__app = app;
 
     function layoutModel() {
       if (!live2dModel) return;
@@ -58,65 +70,64 @@
       const h = window.innerHeight || 844;
       app.renderer.resize(w, h);
 
-      const modelW = live2dModel.internalModel.width || 1200;
-      const modelH = live2dModel.internalModel.height || 1200;
+      // Reset model anchor to horizontal center and head top (0.5, 0)
+      live2dModel.anchor.set(0.5, 0);
 
-      // Scale to fit screen height nicely while keeping upper body/face centered
-      const scale = (h * 0.88) / modelH;
+      // Option A: Balanced framing (head to thighs - typical VTuber companion framing)
+      const origH = (live2dModel.internalModel && live2dModel.internalModel.originalHeight) || 4500;
+      const scale = (h * 1.05) / origH;
       live2dModel.scale.set(scale);
 
-      // Center horizontally
-      live2dModel.x = (w - modelW * scale) / 2;
-      // Position slightly from top
-      live2dModel.y = h * 0.10;
+      // Horizontally centered, top positioned at 7% screen height
+      live2dModel.x = w / 2;
+      live2dModel.y = h * 0.07;
     }
 
     layoutModel();
     window.addEventListener('resize', layoutModel);
 
     // 4. v2.3.0 精準觸控感應（摸頭、戳臉、摸下巴、契約水晶、拉衣角、牽手）
+    // 採用模型原生本地座標系 (0~3000, 0~4500)，不受任何解析度或縮放影響
     canvas.addEventListener('pointerup', (e) => {
       wakeToActiveFPS(3.5);
-      const w = window.innerWidth || 390;
-      const h = window.innerHeight || 844;
+      if (!live2dModel) return;
 
-      const modelW = (live2dModel.internalModel.width || 1200) * live2dModel.scale.x;
-      const modelH = (live2dModel.internalModel.height || 1200) * live2dModel.scale.y;
-      const modelCenterX = live2dModel.x + modelW / 2;
-      const modelTopY = live2dModel.y;
+      const scale = live2dModel.scale.x;
+      const relX = e.clientX - live2dModel.x;
+      const relY = e.clientY - live2dModel.y;
 
-      // 正規化座標：normX (-1.0 到 +1.0，0 為臉部中心)，normY (0.0 頂部到 1.0 底部)
-      const normX = (e.clientX - modelCenterX) / (modelW / 2);
-      const normY = (e.clientY - modelTopY) / modelH;
+      // 轉換為模型本地座標 (寬度 0~3000，中心 1500；高度 0~4500)
+      const localX = (relX / scale) + 1500;
+      const localY = relY / scale;
 
       let part = 'body';
       let toast = '🌸 愛蜜莉雅溫柔地注視著你...';
 
-      if (normY < 0.36 && Math.abs(normX) <= 0.70) {
+      if (localY >= 400 && localY < 950 && Math.abs(localX - 1500) <= 450) {
         // 1. 摸摸銀髮 / 摸頭
         part = 'head';
         toast = '✋ 輕撫銀髮，愛蜜莉雅舒服地瞇起眼睛～';
         triggerMotion('TapHead');
         setExpression('exp_01_subtle_smile');
-      } else if (normY >= 0.36 && normY < 0.48 && Math.abs(normX) >= 0.16 && Math.abs(normX) <= 0.65) {
+      } else if (localY >= 950 && localY < 1180 && Math.abs(localX - 1500) >= 120 && Math.abs(localX - 1500) <= 400) {
         // 2. 戳戳臉頰（縮頸害羞）
         part = 'cheek';
         toast = '😳 戳戳臉頰，愛蜜莉雅害羞地縮了下脖子！';
         triggerMotion('Shy');
         setExpression('exp_05_shy');
-      } else if (normY >= 0.44 && normY < 0.52 && Math.abs(normX) < 0.18) {
+      } else if (localY >= 1150 && localY < 1320 && Math.abs(localX - 1500) < 120) {
         // 3. 摸摸下巴（逗笑開懷）
         part = 'chin';
         toast = '❄️ 摸摸下巴，愛蜜莉雅開心地笑了～';
         triggerMotion('Happy');
         setExpression('exp_02_happy_big');
-      } else if (normY >= 0.52 && normY < 0.64 && Math.abs(normX) <= 0.25) {
+      } else if (localY >= 1320 && localY < 1550 && Math.abs(localX - 1500) <= 150) {
         // 4. 契約水晶（共鳴依偎）
         part = 'crystal';
         toast = '💎 輕觸契約水晶，微光與心跳柔和共鳴...';
         triggerMotion('Appeal');
         setExpression('exp_21_adoration_sparkle');
-      } else if (normY >= 0.50 && normY < 0.66 && Math.abs(normX) > 0.25) {
+      } else if (localY >= 1320 && localY < 1900 && Math.abs(localX - 1500) > 150) {
         // 5. 輕拉衣角 / 輕拍肩
         part = 'shoulder';
         toast = '🌿 輕拉衣角，愛蜜莉雅轉頭望向你～';

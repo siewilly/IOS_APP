@@ -62,11 +62,11 @@ public struct SettingsView: View {
                 }
 
                 Section(header: Text("常用網址快捷鍵")) {
+                    Button("區域網路 (192.168.1.103:12393)") {
+                        serverInput = "http://192.168.1.103:12393"
+                    }
                     Button("本地測試 (127.0.0.1:12393)") {
                         serverInput = "http://127.0.0.1:12393"
-                    }
-                    Button("區域網路 (192.168.1.100:12393)") {
-                        serverInput = "http://192.168.1.100:12393"
                     }
                     ForEach(configManager.recentServers, id: \.self) { url in
                         Button(url) {
