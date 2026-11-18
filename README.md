@@ -46,6 +46,20 @@
 
 ## 📜 版本更新紀錄 (Version History / Changelog)
 
+### [v1.9.1] - 2026-11-18
+- **智慧桌面觀察系統重構與視覺意圖感知升級 (`Smart Desktop Observation System`)**：
+  - **1. 本機 OS 狀態與遮罩分塊視覺引擎 (`capture_screen.py` / `server.py`)**：
+    - 新增 `GET /api/desktop-status` 毫秒級端點，結合 GNOME Mutter `IdleMonitor` 真實系統鍵鼠閒置時間、`ps` 桌面運行應用與 XWayland 焦點視窗名稱，實現零 Token 狀態偵測。
+    - 將畫面比對升級為**「桌寵視窗區域遮罩 (`pet_bounds.json`) ＋ 16×9 分塊結構感知 (Grid Perceptual Diff)」**，避免愛蜜莉雅自身動作、對話框與動態桌布造成假陽性觸發，同時能精準捕捉深色 IDE 或終端機局部文字變動；加入執行緒安全鎖與 1.5 秒記憶體快取杜絕重複截圖。
+  - **2. 3 分鐘智慧主動觀察守護與「歡迎回來」問候 (`emilia_biometric_enhancer.js` / `WebToolMenu.tsx`)**：
+    - 修復原定時視覺守護因未定義 `showFloatingHeart` 而崩潰、以及重複截圖兩次的 Bug；預設開啟並持久化守護開關。
+    - 實作雙軌狀態機：支援 **3 分鐘主動觀察冷卻**、**免打擾保護**（說話中、打字中、番茄鐘專注中、剛聊天 60 秒內不插話）、**離開座位 5 分鐘後回到電腦前動滑鼠觸發「おかえりなさい！（歡迎回來）」問候**，以及**連續專注操作滿 30 分鐘結合螢幕內容的貼心關懷**。
+  - **3. Case A 對話意圖自動看螢幕 (`Intent-Triggered Vision`)**：
+    - 於 WebSocket 傳送層新增語意偵測（如「你猜猜我現在正在做什麼？」、「你看一眼電腦螢幕」、「幫我看這個報錯」等），命中時自動即時擷取螢幕快照與桌面狀態隨訊息送出，徹底解決日常對話時「看不到畫面」的問題。
+  - **4. 靜默觀察記憶隔離與 Vision 429 容錯 (`conversation_handler.py` / `single_conversation.py` / `basic_memory_agent.py` / `openai_compatible_llm.py`)**：
+    - 為背景主動觀察導入 `proactive_vision` / `skip_history` / `skip_memory` 隔離與 `recent_observations` 近期話題去重，避免誤加聊天好感度與洗版長期記憶；延遲發送對話啟動訊號並在偵測 `[SILENT]` 時於後端完全靜默中止。
+    - 優化 `ai-speak-signal` 自動補圖與 `qwen/qwen3.8-27b` Vision 429 短暫重試機制，若必須退回純文字備用模型時附上防幻覺指引。
+
 ### [v1.9.0] - 2026-11-18
 - **資安強化、資源按需載入、雙語無延遲解析與統一事件匯流排架構升級 (`Architecture, Security, Lazy ASR & Unified Bridge`)**：
   - **1. 資安防護與金鑰外置化 (`server.py`)**：
