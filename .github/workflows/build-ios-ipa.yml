@@ -1,0 +1,75 @@
+name: Build iOS IPA
+
+on:
+  push:
+    paths:
+      - 'ios-app/**'
+      - '.github/workflows/build-ios-ipa.yml'
+  pull_request:
+    paths:
+      - 'ios-app/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Unsigned IPA
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Cache Homebrew
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/Homebrew
+          key: brew-xcodegen-${{ runner.os }}
+          restore-keys: |
+            brew-xcodegen-${{ runner.os }}
+
+      - name: Install XcodeGen
+        run: |
+          if ! command -v xcodegen &> /dev/null; then
+            brew install xcodegen
+          fi
+          xcodegen --version
+
+      - name: Generate Xcode Project
+        run: |
+          cd ios-app
+          xcodegen generate
+
+      - name: Build Application with xcodebuild
+        run: |
+          cd ios-app
+          xcodebuild build \
+            -project Live2DChatApp.xcodeproj \
+            -scheme Live2DChatApp \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            BUILD_DIR=build
+
+      - name: Package Unsigned IPA
+        run: |
+          cd ios-app
+          mkdir -p Payload
+          APP_PATH=$(find build/Release-iphoneos -name "*.app" -type d | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::Built .app not found in build/Release-iphoneos"
+            exit 1
+          fi
+          echo "Packaging $APP_PATH into IPA..."
+          cp -R "$APP_PATH" Payload/
+          zip -r Live2DChatApp-unsigned.ipa Payload
+          ls -lh Live2DChatApp-unsigned.ipa
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Live2DChatApp-unsigned-ipa
+          path: ios-app/Live2DChatApp-unsigned.ipa
+          retention-days: 14

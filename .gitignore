@@ -25,6 +25,13 @@ logs/
 cache/
 *.log
 
+# iOS build & generated projects
+ios-app/build/
+ios-app/*.xcodeproj/
+ios-app/*.xcworkspace/
+ios-app/Payload/
+ios-app/*.ipa
+
 # Large model binaries
 models/whisper/
 models/piper/

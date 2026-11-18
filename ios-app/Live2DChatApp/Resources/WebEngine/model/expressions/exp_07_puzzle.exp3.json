@@ -1,0 +1,212 @@
+{
+  "Type": "Live2D Expression",
+  "FadeInTime": 0.35,
+  "FadeOutTime": 0.35,
+  "Parameters": [
+    {
+      "Id": "PARAM_EYE_R_SMILE",
+      "Value": -0.4,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_EYE_L_SMILE",
+      "Value": -0.4,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_EYE_FORM",
+      "Value": 1,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_EYE_SCALE",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_TEAR_LEAP_01",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_BROW_R_FORM",
+      "Value": -0.5,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_BROW_R_X",
+      "Value": -0.2,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_BROW_R_Y",
+      "Value": -0.4,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_BROW_R_ANGLE",
+      "Value": 0.2,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_BROW_L_FORM",
+      "Value": -0.5,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_BROW_L_X",
+      "Value": -0.2,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_BROW_L_Y",
+      "Value": -0.4,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_BROW_L_ANGLE",
+      "Value": 0.2,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_MOUTH_FORM_01",
+      "Value": -0.6,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_MOUTH_POS_Y",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_MOUTH_SCALE",
+      "Value": -1,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_MOUTH_SCALE_Y",
+      "Value": 0.5,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_FACE_SHADOW",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_FACE_CHANGE",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_CHEEK_01",
+      "Value": 1,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_CHEEK_02",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_CHEEK_03",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_CHEEK_04",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_CHEEK_05",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_TEAR_01",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_TEAR_02",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_TEAR_02_MOVE",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_TEAR_03",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_TEAR_03_MOVE",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_SWEAT",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_SWEAT_MOVE",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_EYE_WHITE_00",
+      "Value": 1,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_EYE_WHITE_01",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_EYE_01",
+      "Value": 1,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_EYE_02",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_EYE_05",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_MOUTH_01",
+      "Value": 1,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_MOUTH_02",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_MOUTH_03",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_MOUTH_05",
+      "Value": 0,
+      "Blend": "Override"
+    },
+    {
+      "Id": "PARAM_BROW_01",
+      "Value": 1,
+      "Blend": "Override"
+    }
+  ]
+}
