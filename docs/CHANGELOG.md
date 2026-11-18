@@ -11,6 +11,11 @@
   - **5. 靈動中樞抽屜 (`WebToolMenu`) 全面進駐桌寵**：桌寵端點擊頂部選單或紫晶吊墜即可滑出完整動漫毛玻璃控制台，桌面端使用者亦可直接使用線上點唱機（搜歌、專輯封面、串流熱舞、舞步切換）、Discord Bot 管理、手機 QR 碼掃碼配對、晨間簡報、戀人羈絆中樞、冒險日記、番茄鐘專注與 SettingUI。
   - **6. 紫晶吊墜控制台深度連動**：紫晶吊墜在桌寵預設靠上懸停（`top: 56px`）避開頂部 HUD，浮動工具列新增「🔀 切換編舞舞步」、「🌐 線上搜歌點唱機」、「☀️ 今日晨間簡報」、「☰ 靈動主工具選單」、「📱 手機 QR 碼配對」、「🤖 Discord 機器人管理」等快捷入口；保留「🙈 隱藏底部對話框」/「💬 顯示底部對話框」完整切換能力。
   - **7. 模式雙向智慧切換**：`WebToolMenu` 自動識別當前運行模式，桌寵端顯示「切換至網頁主視圖 (Web Mode)」，網頁端顯示「切換至透明桌寵模式 (Pet Mode)」，實現無縫切換。
+  - **8. 摸頭與戳臉觸控部位精準判定修復 (`Live2D Precise Part Hit Testing & Tap Parity`)**：
+    - **WebGL MVP 矩陣逆向映射修正**：徹底修正 `screenToModelPoint` 未採用 WebGL 渲染管線 `model.getRenderer().getMvpMatrix()` 導致 NDC 與 Live2D 模型頂點座標系縮放偏差（原本座標計算值僅約 1.8，全數落入牽手判定或被忽略）的嚴重問題；精確映射至 `cm.getDrawableVertices` 物理空間。
+    - **摸頭雙軌支援（單擊即時撫慰 ＋ 左右來回撫摸）**：額頭與頭頂銀髮除保留左右輕刷（瞇眼、阻尼側頭、愛心爆發與親密度進度條）外，新增單擊（Single Tap）即時觸發摸頭害羞微笑、語音台詞與好感度反饋。
+    - **戳臉頰（Cheek Poke）精確感應**：修正臉頰點擊判定，點擊臉頰兩側立即觸發縮脖子、害羞臉紅（`exp_05_shy` / `exp_06_blushing_heavy`）與甜蜜傲嬌台詞，吃醋時自動戳破鼓臉。
+    - **桌寵 UI 穿透層邊界精準化**：修正 `#emilia-pet-ui-layer` 下 `.emilia-bottom-zone` 容器佔滿下半螢幕時未設為 `pointer-events: none` 阻擋畫布點擊的問題，確保僅對話卡片、提示詞膠囊與輸入框本體響應事件，透明區域完全穿透給 Live2D 觸控。
 
 ### [v2.1.0] - 2026-11-18
 - **全網音樂串流點播與音訊頻譜旋律多維度動態編舞系統 (`Online Music Stream & Multi-Dimensional Melody Rhythm Choreography`)**：
