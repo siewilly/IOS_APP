@@ -31,6 +31,7 @@ function loadConfig() {
     if (arg.startsWith('--port=')) cfg.port = parseInt(arg.split('=')[1], 10);
     if (arg.startsWith('--username=') || arg.startsWith('--user=')) cfg.username = arg.split('=')[1];
     if (arg.startsWith('--backend=')) cfg.backendUrl = arg.split('=')[1];
+    if (arg.startsWith('--masterPlayer=')) cfg.masterPlayer = arg.split('=')[1];
   });
 
   return cfg;

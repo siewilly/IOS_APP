@@ -81,7 +81,8 @@ class EmiliaBot {
 
     if (this.bot) {
       try {
-        this.bot.quit('再見囉，斯巴魯！我先回現實世界等你～🌸');
+        const master = this.config.masterPlayer || '有栖';
+        this.bot.quit(`再見囉，${master}！我先回現實世界等你～🌸`);
       } catch (e) {}
       this.bot = null;
     }
@@ -96,6 +97,7 @@ class EmiliaBot {
     this.bot.loadPlugin(pvp);
     this.bot.loadPlugin(autoEat);
 
+    this.bot.masterPlayer = this.config.masterPlayer || '有栖';
     this.follow = new FollowBehavior(this.bot, this.config);
     this.combat = new CombatBehavior(this.bot, this.config);
     this.actions = new ActionsBehavior(this.bot);
@@ -138,7 +140,8 @@ class EmiliaBot {
       // 進服問候語
       setTimeout(() => {
         try {
-          this.bot.chat('スバル、準備好了嗎？愛蜜莉雅參上！今天也一起在異世界努力吧！🌸');
+          const master = this.config.masterPlayer || '有栖';
+          this.bot.chat(`${master}、準備好了嗎？愛蜜莉雅參上！今天也一起在異世界努力吧！🌸`);
         } catch (e) {}
       }, 1200);
     });

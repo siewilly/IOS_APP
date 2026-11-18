@@ -48,18 +48,19 @@ class ActionsBehavior {
   }
 
   async sleepInNearbyBed() {
+    const master = this.bot?.masterPlayer || '有栖';
     const bed = this.bot.findBlock({
       matching: block => block.name.includes('bed'),
       maxDistance: 4
     });
 
     if (!bed) {
-      return { success: false, message: '附近沒有床呢…斯巴魯我們一起找個安全的地方吧！' };
+      return { success: false, message: `附近沒有床呢…${master}我們一起找個安全的地方吧！` };
     }
 
     try {
       await this.bot.sleep(bed);
-      return { success: true, message: '呼…斯巴魯晚安，明天見喔…🌙' };
+      return { success: true, message: `呼…${master}晚安，明天見喔…🌙` };
     } catch (err) {
       return { success: false, message: `無法入睡：${err.message}` };
     }
