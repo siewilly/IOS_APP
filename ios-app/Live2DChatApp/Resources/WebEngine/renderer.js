@@ -86,10 +86,13 @@
       if (!live2dModel) return;
       const w = window.innerWidth || 390;
       const h = window.innerHeight || 844;
+      if (w <= 0 || h <= 0) return;
       app.renderer.resize(w, h);
 
       // Reset model anchor to horizontal center and head top (0.5, 0)
-      live2dModel.anchor.set(0.5, 0);
+      if (live2dModel.anchor && typeof live2dModel.anchor.set === 'function') {
+        live2dModel.anchor.set(0.5, 0);
+      }
 
       // Option A: Balanced framing (head to thighs - typical VTuber companion framing)
       const origH = (live2dModel.internalModel && live2dModel.internalModel.originalHeight) || 4500;
@@ -103,66 +106,259 @@
 
     layoutModel();
     window.addEventListener('resize', layoutModel);
+    window.addEventListener('orientationchange', layoutModel);
+    setTimeout(layoutModel, 100);
+    setTimeout(layoutModel, 500);
+    setTimeout(layoutModel, 1200);
 
-    // 4. v2.3.0 精準觸控感應（摸頭、戳臉、摸下巴、契約水晶、拉衣角、牽手）
-    // 採用模型原生本地座標系 (0~3000, 0~4500)，不受任何解析度或縮放影響
-    canvas.addEventListener('pointerup', (e) => {
-      wakeToActiveFPS(3.5);
-      if (!live2dModel) return;
+    // =========================================================================
+    // 4. v2.6.0 即時觸控粒子渲染與親密等級權限引擎 (Intimacy Biometric Engine)
+    // =========================================================================
+    let currentIntimacyScore = 271; // 預設同伴資料庫好感度（知心守護 271 分）
 
+    function setIntimacyScore(score) {
+      currentIntimacyScore = Math.max(0, Number(score) || 0);
+      console.log('[Live2D WebEngine] Synchronized intimacyScore:', currentIntimacyScore);
+    }
+
+    // Canvas 飄逸粒子特效容器（心形、星光、微精靈冰晶）
+    const fxContainer = new PIXI.Container();
+    app.stage.addChild(fxContainer);
+    const activeParticles = [];
+
+    function spawnTouchParticle(clientX, clientY, icon) {
+      try {
+        const pText = new PIXI.Text(icon || '✨', {
+          fontSize: Math.round(16 + Math.random() * 8),
+        });
+        pText.anchor.set(0.5);
+        pText.x = clientX + (Math.random() - 0.5) * 36;
+        pText.y = clientY + (Math.random() - 0.5) * 36;
+        pText.alpha = 1.0;
+        pText.scale.set(0.7 + Math.random() * 0.4);
+        fxContainer.addChild(pText);
+
+        activeParticles.push({
+          display: pText,
+          vx: (Math.random() - 0.5) * 1.6,
+          vy: -2.0 - Math.random() * 2.2,
+          vr: (Math.random() - 0.5) * 0.08,
+          life: 1.0,
+          decay: 0.028 + Math.random() * 0.015,
+        });
+      } catch (err) {
+        // Safe fallback
+      }
+    }
+
+    app.ticker.add((delta) => {
+      const dt = delta || 1;
+      for (let i = activeParticles.length - 1; i >= 0; i--) {
+        const p = activeParticles[i];
+        p.life -= p.decay * dt;
+        p.display.x += p.vx * dt;
+        p.display.y += p.vy * dt;
+        p.display.rotation += p.vr * dt;
+        p.display.alpha = Math.max(0, p.life);
+        p.display.scale.x *= 0.99;
+        p.display.scale.y *= 0.99;
+        if (p.life <= 0) {
+          fxContainer.removeChild(p.display);
+          try { p.display.destroy(); } catch (e) {}
+          activeParticles.splice(i, 1);
+        }
+      }
+    });
+
+    // 嚴格好感度階級權限對照表
+    const TOUCH_PARTS = {
+      head: {
+        name: '撫摸銀髮 (頭部)',
+        minScore: 0,
+        minLevel: 1,
+        levelName: '初識同伴',
+        motion: 'TapHead',
+        expression: 'exp_01_subtle_smile',
+        activeLabel: '✨ 正在溫柔撫摸銀髮 (頭部)',
+        toastUnlocked: '✋ 輕撫銀髮，愛蜜莉雅舒服地瞇起眼睛～',
+        toastLocked: '🔒 需要好感度 Lv.1 解鎖',
+        icons: ['🌸', '✨', '💕']
+      },
+      cheek: {
+        name: '戳戳臉頰',
+        minScore: 0,
+        minLevel: 1,
+        levelName: '初識同伴',
+        motion: 'Shy',
+        expression: 'exp_05_shy',
+        activeLabel: '😳 正在戳戳臉頰',
+        toastUnlocked: '😳 戳戳臉頰，愛蜜莉雅害羞地縮了下脖子！',
+        toastLocked: '🔒 需要好感度 Lv.1 解鎖',
+        icons: ['😳', '💖', '✨']
+      },
+      shoulder: {
+        name: '輕拉衣角 / 輕拍肩',
+        minScore: 80,
+        minLevel: 2,
+        levelName: '信任夥伴',
+        motion: 'TapBody',
+        expression: 'exp_04_smug',
+        activeLabel: '🌿 正在輕拉衣角',
+        toastUnlocked: '🌿 輕拉衣角，愛蜜莉雅轉頭溫柔地注視著你～',
+        toastLocked: '🔒 需要好感度 Lv.2（信任夥伴 80分）解鎖！現在還稍微有點生疏呢...',
+        icons: ['🌿', '✨', '🌸']
+      },
+      hand: {
+        name: '十指緊扣牽手',
+        minScore: 450,
+        minLevel: 4,
+        levelName: '專屬戀人 (EMT)',
+        motion: 'Appeal',
+        expression: 'exp_21_adoration_sparkle',
+        activeLabel: '🤝 正在牽牽小手',
+        toastUnlocked: '🤝 十指緊扣，感受掌心傳遞的溫暖，感到無比安心...',
+        toastLocked: '🔒 需要好感度 Lv.4（專屬戀人 450分）解鎖！「那個……現在牽手還太害羞了啦……」',
+        icons: ['🤝', '💖', '💕']
+      },
+      crystal: {
+        name: '觸碰契約水晶',
+        minScore: 800,
+        minLevel: 5,
+        levelName: '精靈的契約者',
+        motion: 'Appeal',
+        expression: 'exp_21_adoration_sparkle',
+        activeLabel: '💎 正在輕觸契約水晶',
+        toastUnlocked: '💎 輕觸契約水晶，微精靈微光與心跳柔和共鳴...',
+        toastLocked: '🔒 需要好感度 Lv.5（精靈的契約者 800分）解鎖！「契約水晶是帕克的居所，要等到真正心意相通才能觸碰喔……」',
+        icons: ['💎', '✨', '❄️']
+      },
+      chin: {
+        name: '摸摸下巴逗笑',
+        minScore: 2000,
+        minLevel: 7,
+        levelName: '銀白之戀 · 冰結羈絆',
+        motion: 'Happy',
+        expression: 'exp_02_happy_big',
+        activeLabel: '❄️ 正在摸摸下巴',
+        toastUnlocked: '❄️ 摸摸下巴，愛蜜莉雅被逗得開懷歡笑～',
+        toastLocked: '🔒 需要好感度 Lv.7（冰結羈絆 2000分）解鎖！「呼哇……那樣摸下巴像在逗小貓一樣，太令人害羞了啦！」',
+        icons: ['❄️', '✨', '😄']
+      }
+    };
+
+    function detectTouchPart(clientX, clientY) {
+      if (!live2dModel) return 'head';
       const scale = live2dModel.scale.x;
-      const relX = e.clientX - live2dModel.x;
-      const relY = e.clientY - live2dModel.y;
+      const relX = clientX - live2dModel.x;
+      const relY = clientY - live2dModel.y;
 
-      // 轉換為模型本地座標 (寬度 0~3000，中心 1500；高度 0~4500)
       const localX = (relX / scale) + 1500;
       const localY = relY / scale;
 
-      let part = 'body';
-      let toast = '🌸 愛蜜莉雅溫柔地注視著你...';
+      if (localY >= 350 && localY < 950 && Math.abs(localX - 1500) <= 480) {
+        return 'head';
+      } else if (localY >= 950 && localY < 1180 && Math.abs(localX - 1500) >= 120 && Math.abs(localX - 1500) <= 420) {
+        return 'cheek';
+      } else if (localY >= 1150 && localY < 1320 && Math.abs(localX - 1500) < 130) {
+        return 'chin';
+      } else if (localY >= 1320 && localY < 1550 && Math.abs(localX - 1500) <= 160) {
+        return 'crystal';
+      } else if (localY >= 1320 && localY < 1900 && Math.abs(localX - 1500) > 160 && Math.abs(localX - 1500) <= 500) {
+        return 'shoulder';
+      } else if (localY >= 1900 && Math.abs(localX - 1500) <= 550) {
+        return 'hand';
+      }
+      return 'head';
+    }
 
-      if (localY >= 400 && localY < 950 && Math.abs(localX - 1500) <= 450) {
-        // 1. 摸摸銀髮 / 摸頭
-        part = 'head';
-        toast = '✋ 輕撫銀髮，愛蜜莉雅舒服地瞇起眼睛～';
-        triggerMotion('TapHead');
-        setExpression('exp_01_subtle_smile');
-      } else if (localY >= 950 && localY < 1180 && Math.abs(localX - 1500) >= 120 && Math.abs(localX - 1500) <= 400) {
-        // 2. 戳戳臉頰（縮頸害羞）
-        part = 'cheek';
-        toast = '😳 戳戳臉頰，愛蜜莉雅害羞地縮了下脖子！';
+    let isPointerActive = false;
+    let activeTouchArea = null;
+
+    canvas.addEventListener('pointerdown', (e) => {
+      isPointerActive = true;
+      wakeToActiveFPS(3.5);
+      const target = detectTouchPart(e.clientX, e.clientY);
+      activeTouchArea = target;
+      const def = TOUCH_PARTS[target] || TOUCH_PARTS.head;
+      const isUnlocked = currentIntimacyScore >= def.minScore;
+
+      // 即刻噴發專屬互動粒子
+      const pIcons = isUnlocked ? def.icons : ['🔒', '❓'];
+      for (let i = 0; i < 3; i++) {
+        spawnTouchParticle(e.clientX, e.clientY, pIcons[i % pIcons.length]);
+      }
+
+      // 即刻通知 Swift 顯示頂部即時觸控狀態指示
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live2dTouchDown) {
+        window.webkit.messageHandlers.live2dTouchDown.postMessage({
+          area: target,
+          name: def.name,
+          activeLabel: isUnlocked ? def.activeLabel : ('🔒 ' + def.name + ' (需 Lv.' + def.minLevel + ' ' + def.levelName + ' ' + def.minScore + '分)'),
+          isLocked: !isUnlocked,
+          minScore: def.minScore,
+          levelName: def.levelName
+        });
+      }
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!isPointerActive) return;
+      const target = detectTouchPart(e.clientX, e.clientY);
+      if (Math.random() < 0.3) {
+        const def = TOUCH_PARTS[target] || TOUCH_PARTS.head;
+        const isUnlocked = currentIntimacyScore >= def.minScore;
+        spawnTouchParticle(e.clientX, e.clientY, isUnlocked ? '✨' : '🔒');
+      }
+
+      if (target !== activeTouchArea) {
+        activeTouchArea = target;
+        const def = TOUCH_PARTS[target] || TOUCH_PARTS.head;
+        const isUnlocked = currentIntimacyScore >= def.minScore;
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live2dTouchMove) {
+          window.webkit.messageHandlers.live2dTouchMove.postMessage({
+            area: target,
+            name: def.name,
+            activeLabel: isUnlocked ? def.activeLabel : ('🔒 ' + def.name + ' (需 Lv.' + def.minLevel + ' ' + def.levelName + ' ' + def.minScore + '分)'),
+            isLocked: !isUnlocked
+          });
+        }
+      }
+    });
+
+    canvas.addEventListener('pointerup', (e) => {
+      if (!isPointerActive) return;
+      isPointerActive = false;
+      wakeToActiveFPS(3.5);
+      const target = activeTouchArea || detectTouchPart(e.clientX, e.clientY);
+      const def = TOUCH_PARTS[target] || TOUCH_PARTS.head;
+      const isUnlocked = currentIntimacyScore >= def.minScore;
+
+      if (isUnlocked) {
+        triggerMotion(def.motion);
+        setExpression(def.expression);
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live2dTap) {
+          window.webkit.messageHandlers.live2dTap.postMessage({
+            area: target,
+            text: def.toastUnlocked,
+            isLocked: false
+          });
+        }
+      } else {
+        // 嚴格權限鎖定：害羞縮身偏頭拒絕，絕不觸發親密動作
         triggerMotion('Shy');
         setExpression('exp_05_shy');
-      } else if (localY >= 1150 && localY < 1320 && Math.abs(localX - 1500) < 120) {
-        // 3. 摸摸下巴（逗笑開懷）
-        part = 'chin';
-        toast = '❄️ 摸摸下巴，愛蜜莉雅開心地笑了～';
-        triggerMotion('Happy');
-        setExpression('exp_02_happy_big');
-      } else if (localY >= 1320 && localY < 1550 && Math.abs(localX - 1500) <= 150) {
-        // 4. 契約水晶（共鳴依偎）
-        part = 'crystal';
-        toast = '💎 輕觸契約水晶，微光與心跳柔和共鳴...';
-        triggerMotion('Appeal');
-        setExpression('exp_21_adoration_sparkle');
-      } else if (localY >= 1320 && localY < 1900 && Math.abs(localX - 1500) > 150) {
-        // 5. 輕拉衣角 / 輕拍肩
-        part = 'shoulder';
-        toast = '🌿 輕拉衣角，愛蜜莉雅轉頭望向你～';
-        triggerMotion('TapBody');
-        setExpression('exp_04_smug');
-      } else {
-        // 6. 牽牽手 / 身體互動
-        part = 'hand';
-        toast = '🤝 牽牽小手，感到無比安心...';
-        triggerMotion('TapBody');
-        setExpression('exp_01_subtle_smile');
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live2dTap) {
+          window.webkit.messageHandlers.live2dTap.postMessage({
+            area: target,
+            text: def.toastLocked,
+            isLocked: true
+          });
+        }
       }
+    });
 
-      // 通知 Swift 原生端顯示互動回饋
-      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live2dTap) {
-        window.webkit.messageHandlers.live2dTap.postMessage({ area: part, text: toast });
-      }
+    canvas.addEventListener('pointercancel', () => {
+      isPointerActive = false;
     });
 
     // 5. Lip-sync synchronization hook
@@ -280,6 +476,8 @@
     setPaused,
     setFPSMode: applyFPSMode,
     switchOutfit,
+    setIntimacyScore,
+    layoutModel,
     getCurrentOutfit: () => currentOutfit,
     isReady: () => !!live2dModel,
     getActiveFPS: () => app.ticker.maxFPS,

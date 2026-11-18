@@ -109,7 +109,15 @@ class BrainBridge {
     const msg = message.toLowerCase();
     let reply = '';
 
-    if (msg.includes('跟') || msg.includes('來') || msg.includes('follow') || msg.includes('come')) {
+    if (msg.includes('tp') || msg.includes('傳送') || msg.includes('過來') || msg.includes('到我這')) {
+      try {
+        this.bot.chat(`/tp @s ${username}`);
+        reply = `我傳送到你身邊囉，${username}！🌸`;
+        this.controller.follow?.start(username);
+      } catch (e) {
+        reply = `傳送失敗了呢：${e.message}`;
+      }
+    } else if (msg.includes('跟') || msg.includes('來') || msg.includes('follow') || msg.includes('come')) {
       const res = this.controller.follow?.start(username);
       reply = res.message;
     } else if (msg.includes('停') || msg.includes('別動') || msg.includes('stop') || msg.includes('wait')) {

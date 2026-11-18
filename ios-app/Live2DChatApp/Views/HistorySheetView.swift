@@ -102,6 +102,24 @@ public struct HistorySheetView: View {
                             ForEach(filteredMessages) { msg in
                                 ChatMessageBubble(message: msg)
                             }
+
+                            if networkService.isAiThinkingOrSpeaking && networkService.messages.last?.sender == .user {
+                                HStack {
+                                    HStack(spacing: 6) {
+                                        Circle().fill(Color.purple).frame(width: 6, height: 6)
+                                        Circle().fill(Color.pink).frame(width: 6, height: 6)
+                                        Circle().fill(Color.white).frame(width: 6, height: 6)
+                                        Text("愛蜜莉雅正在思考回覆中...")
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundColor(.white.opacity(0.85))
+                                    }
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 10)
+                                    .background(Color(red: 0.22, green: 0.16, blue: 0.38).opacity(0.85))
+                                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                                    Spacer()
+                                }
+                            }
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 14)

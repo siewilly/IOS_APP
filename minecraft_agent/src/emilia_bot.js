@@ -158,11 +158,17 @@ class EmiliaBot {
         } catch (e) {}
       }, 800);
 
-      // 進服問候語
+      // 進服問候語與自動傳送至主人身邊
       setTimeout(() => {
         try {
-          const master = this.config.masterPlayer || '有栖';
+          const master = this.config.masterPlayer || 'siewilly_code405';
           this.bot.chat(`${master}、準備好了嗎？愛蜜莉雅參上！今天也一起在異世界努力吧！🌸`);
+          setTimeout(() => {
+            try {
+              this.bot.chat(`/tp @s ${master}`);
+              if (this.follow) this.follow.start(master);
+            } catch (e) {}
+          }, 1000);
         } catch (e) {}
       }, 1500);
     });
@@ -194,6 +200,20 @@ class EmiliaBot {
     });
 
     // 受傷監聽 (觸發桌寵痛痛哭哭微表情)
+    this.bot.on('death', () => {
+      console.log('[EmiliaBot] Died, auto-respawning in 1s...');
+      setTimeout(() => {
+        try {
+          this.bot.respawn();
+        } catch (e) {}
+      }, 1000);
+    });
+
+    this.bot.on('respawn', () => {
+      console.log('[EmiliaBot] Respawned!');
+      this.lastHealth = 20;
+    });
+
     this.bot.on('health', () => {
       const currentHp = this.bot.health;
       if (currentHp < this.lastHealth) {

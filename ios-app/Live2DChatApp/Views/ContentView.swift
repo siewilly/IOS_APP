@@ -187,7 +187,11 @@ public struct ContentView: View {
         .onChange(of: bridgeController.isEngineReady) { isReady in
             if isReady {
                 bridgeController.setFPSMode(configManager.is60FPSMode)
+                bridgeController.setIntimacyScore(companion.intimacyScore)
             }
+        }
+        .onChange(of: companion.intimacyScore) { newScore in
+            bridgeController.setIntimacyScore(newScore)
         }
     }
 
@@ -221,8 +225,27 @@ public struct ContentView: View {
                 }
             }
 
-            // Latest or default dialogue prompt
-            if let lastAiMsg = networkService.messages.last(where: { $0.sender == .ai }) {
+            // Latest or default dialogue prompt OR Active Thinking State!
+            if networkService.isAiThinkingOrSpeaking && (networkService.messages.last?.sender == .user) {
+                HStack(spacing: 8) {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color(red: 0.85, green: 0.65, blue: 1.0))
+                            .frame(width: 6, height: 6)
+                        Circle()
+                            .fill(Color(red: 0.95, green: 0.75, blue: 1.0))
+                            .frame(width: 6, height: 6)
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 6, height: 6)
+                    }
+                    Text("💭 愛蜜莉雅正在思考回覆中...")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(Color(red: 0.90, green: 0.75, blue: 1.0))
+                    Spacer()
+                }
+                .padding(.vertical, 2)
+            } else if let lastAiMsg = networkService.messages.last(where: { $0.sender == .ai }) {
                 Text(lastAiMsg.text)
                     .font(.system(size: 13, weight: .regular))
                     .foregroundColor(.white)
@@ -259,9 +282,9 @@ public struct ContentView: View {
             }) {
                 HStack(spacing: 6) {
                     Circle()
-                        .fill(networkService.isConnected ? Color.green : Color.orange)
+                        .fill(networkService.isConnected ? (networkService.isAiThinkingOrSpeaking ? Color.purple : Color.green) : Color.orange)
                         .frame(width: 8, height: 8)
-                    Text(networkService.isConnected ? configManager.characterName : networkService.connectionStatusText)
+                    Text(networkService.isConnected ? (networkService.isAiThinkingOrSpeaking ? "愛蜜莉雅 (思考中...)" : configManager.characterName) : networkService.connectionStatusText)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.white)
                 }
@@ -269,7 +292,7 @@ public struct ContentView: View {
                 .padding(.vertical, 6)
                 .background(Color.black.opacity(0.45))
                 .clipShape(Capsule())
-                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                .overlay(Capsule().stroke(networkService.isAiThinkingOrSpeaking ? Color.purple.opacity(0.6) : Color.white.opacity(0.15), lineWidth: 1))
             }
 
             // 2. Weather Pill (Click to broadcast briefing)
@@ -399,7 +422,7 @@ public struct ContentView: View {
                     dismissToastAfterDelay()
                 }
 
-                // 5. Pat Head
+                // 5. Pat Head (Lv.1)
                 chipButton(label: "🐾 摸摸頭") {
                     bridgeController.triggerMotion(group: "TapHead")
                     bridgeController.setExpression("exp_01_subtle_smile")
@@ -408,7 +431,48 @@ public struct ContentView: View {
                     dismissToastAfterDelay()
                 }
 
-                // 6. Magic Lesson
+                // 6. Poke Cheek (Lv.1)
+                chipButton(label: "😳 戳臉頰") {
+                    bridgeController.triggerMotion(group: "Shy")
+                    bridgeController.setExpression("exp_05_shy")
+                    companion.recordInteraction(points: 2)
+                    touchToastText = "😳 戳戳臉頰，愛蜜莉雅害羞地縮了下脖子！"
+                    dismissToastAfterDelay()
+                }
+
+                // 7. Pull Hem (Lv.2, 80 pts)
+                chipButton(label: companion.intimacyScore >= 80 ? "🌿 拉衣角" : "🔒 拉衣角 (Lv.2)") {
+                    if companion.intimacyScore >= 80 {
+                        bridgeController.triggerMotion(group: "TapBody")
+                        bridgeController.setExpression("exp_04_smug")
+                        companion.recordInteraction(points: 1)
+                        touchToastText = "🌿 輕拉衣角，愛蜜莉雅轉頭溫柔地注視著你～"
+                    } else {
+                        HapticManager.shared.rigid()
+                        bridgeController.triggerMotion(group: "Shy")
+                        bridgeController.setExpression("exp_05_shy")
+                        touchToastText = "🔒 需要好感度 Lv.2（信任夥伴 80分）解鎖！"
+                    }
+                    dismissToastAfterDelay()
+                }
+
+                // 8. Hold Hands (Lv.4, 450 pts)
+                chipButton(label: companion.intimacyScore >= 450 ? "🤝 牽手" : "🔒 牽手 (Lv.4)") {
+                    if companion.intimacyScore >= 450 {
+                        bridgeController.triggerMotion(group: "Appeal")
+                        bridgeController.setExpression("exp_21_adoration_sparkle")
+                        companion.recordInteraction(points: 2)
+                        touchToastText = "🤝 十指緊扣，感受掌心傳遞的溫暖，感到無比安心..."
+                    } else {
+                        HapticManager.shared.rigid()
+                        bridgeController.triggerMotion(group: "Shy")
+                        bridgeController.setExpression("exp_05_shy")
+                        touchToastText = "🔒 需要好感度 Lv.4（專屬戀人 450分）解鎖！「那個……現在牽手還太害羞了啦……」"
+                    }
+                    dismissToastAfterDelay()
+                }
+
+                // 9. Magic Lesson
                 chipButton(label: "🪄 魔法學習") {
                     handleSendPrompt("愛蜜莉雅，可以教我微精靈的冰魔法嗎？")
                 }
@@ -489,7 +553,7 @@ public struct ContentView: View {
 
             // Text Input Field
             HStack {
-                TextField("對愛蜜莉雅說點什麼...", text: $inputText)
+                TextField(networkService.isAiThinkingOrSpeaking ? "💭 愛蜜莉雅正在思考回覆中..." : "對愛蜜莉雅說點什麼...", text: $inputText)
                     .focused($isInputFocused)
                     .foregroundColor(.white)
                     .font(.system(size: 15))
@@ -573,16 +637,34 @@ public struct ContentView: View {
             }
         }
 
-        bridgeController.onTouchReaction = { area, text in
+        bridgeController.onTouchActive = { area, label, isLocked in
             Task { @MainActor in
-                if area == "crystal" {
+                if isLocked {
                     HapticManager.shared.rigid()
                 } else if area == "head" || area == "cheek" {
                     HapticManager.shared.light()
                 } else {
                     HapticManager.shared.medium()
                 }
-                companion.recordInteraction(points: 1)
+                touchToastText = label
+                dismissToastAfterDelay()
+            }
+        }
+
+        bridgeController.onTouchReaction = { area, text, isLocked in
+            Task { @MainActor in
+                if isLocked {
+                    HapticManager.shared.rigid()
+                } else {
+                    if area == "crystal" {
+                        HapticManager.shared.rigid()
+                    } else if area == "head" || area == "cheek" {
+                        HapticManager.shared.light()
+                    } else {
+                        HapticManager.shared.medium()
+                    }
+                    companion.recordInteraction(points: (area == "head" || area == "cheek") ? 2 : 1)
+                }
                 touchToastText = text
                 dismissToastAfterDelay()
             }
@@ -612,6 +694,7 @@ public struct ContentView: View {
             await companion.fetchCompanionState()
             await companion.fetchBriefing()
             await authService.fetchCurrentUser()
+            bridgeController.setIntimacyScore(companion.intimacyScore)
         }
     }
 

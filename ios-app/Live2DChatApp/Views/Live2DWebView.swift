@@ -5,9 +5,16 @@ import WebKit
 public final class Live2DBridgeController: ObservableObject {
     public weak var webView: WKWebView?
     @Published public var isEngineReady: Bool = false
-    public var onTouchReaction: ((String, String) -> Void)?
+    public var onTouchActive: ((String, String, Bool) -> Void)?
+    public var onTouchReaction: ((String, String, Bool) -> Void)?
 
     public init() {}
+
+    /// Synchronize intimacy score so WebEngine can enforce permission locks and reactions
+    public func setIntimacyScore(_ score: Int) {
+        let script = "if (window.Live2DBridge && window.Live2DBridge.setIntimacyScore) { window.Live2DBridge.setIntimacyScore(\(score)); }"
+        webView?.evaluateJavaScript(script, completionHandler: nil)
+    }
 
     /// Direct mouth opening control (0.0 to 1.0)
     public func setMouthOpen(_ value: Double) {
@@ -66,12 +73,15 @@ public struct Live2DWebView: UIViewRepresentable {
         let config = WKWebViewConfiguration()
         config.defaultWebpagePreferences = preferences
         config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
+        config.setValue(true, forKey: "allowUniversalAccessFromFileURLs")
 
         // Script message handlers for bidirectional lifecycle notifications
         let contentController = WKUserContentController()
         contentController.add(context.coordinator, name: "live2dReady")
         contentController.add(context.coordinator, name: "live2dError")
         contentController.add(context.coordinator, name: "live2dTap")
+        contentController.add(context.coordinator, name: "live2dTouchDown")
+        contentController.add(context.coordinator, name: "live2dTouchMove")
         config.userContentController = contentController
 
         let webView = WKWebView(frame: .zero, configuration: config)
@@ -90,14 +100,14 @@ public struct Live2DWebView: UIViewRepresentable {
     }
 
     public func updateUIView(_ uiView: WKWebView, context: Context) {
-        // No-op to preserve rendering state
+        uiView.evaluateJavaScript("if (window.Live2DBridge && window.Live2DBridge.layoutModel) { window.Live2DBridge.layoutModel(); }", completionHandler: nil)
     }
 
     private func loadWebEngine(in webView: WKWebView) {
         // 1. Preferred: Subdirectory WebEngine folder reference
-        if let indexURL = Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "WebEngine"),
-           let webEngineDir = Bundle.main.resourceURL?.appendingPathComponent("WebEngine") {
-            webView.loadFileURL(indexURL, allowingReadAccessTo: webEngineDir)
+        if let indexURL = Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "WebEngine") {
+            let readDir = Bundle.main.resourceURL ?? Bundle.main.bundleURL
+            webView.loadFileURL(indexURL, allowingReadAccessTo: readDir)
             return
         }
 
@@ -130,8 +140,18 @@ public struct Live2DWebView: UIViewRepresentable {
                 if let dict = message.body as? [String: Any],
                    let area = dict["area"] as? String,
                    let text = dict["text"] as? String {
+                    let isLocked = dict["isLocked"] as? Bool ?? false
                     Task { @MainActor in
-                        self.parent.controller.onTouchReaction?(area, text)
+                        self.parent.controller.onTouchReaction?(area, text, isLocked)
+                    }
+                }
+            } else if message.name == "live2dTouchDown" || message.name == "live2dTouchMove" {
+                if let dict = message.body as? [String: Any],
+                   let area = dict["area"] as? String,
+                   let activeLabel = dict["activeLabel"] as? String {
+                    let isLocked = dict["isLocked"] as? Bool ?? false
+                    Task { @MainActor in
+                        self.parent.controller.onTouchActive?(area, activeLabel, isLocked)
                     }
                 }
             }

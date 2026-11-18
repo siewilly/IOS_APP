@@ -4,7 +4,7 @@
   "username": "Emilia",
   "auth": "offline",
   "version": false,
-  "masterPlayer": "有栖",
+  "masterPlayer": "siewilly_code405",
   "backendUrl": "http://127.0.0.1:12393",
   "autoReconnect": true,
   "reconnectIntervalMs": 5000,
