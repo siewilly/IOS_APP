@@ -226,7 +226,23 @@ Live2D_pet/
 
 > 詳細內容請見 [docs/CHANGELOG.md](docs/CHANGELOG.md)。
 
-### [v2.4.0] - 2026-11-18（本次更新）
+### [v2.5.0] - 2026-11-18（本次更新）
+- **Minecraft 異世界智能同伴與桌寵跨次元雙向聯動系統 (`Minecraft Emilia Companion Agent & Soul-Link`)**：
+  - **獨立 Node.js Mineflayer 智能體模組 (`minecraft_agent/`)**：
+    - 結合 Mineflayer、`mineflayer-pathfinder`、`mineflayer-collectblock`、`mineflayer-pvp` 與 `mineflayer-auto-eat` 打造獨立同伴實體。
+    - 具備自動尋路緊跟主人（`FollowBehavior`）、手持武器防衛怪物（`CombatBehavior`）、節奏下蹲跳躍熱舞（`ActionsBehavior`）、自動進食補充體力與尋找床鋪睡眠。
+    - 支援命令列與 JSON 設定檔啟動，自帶斷線指數退避自動重連（Auto-Reconnect）與信號優雅退出。
+  - **後端大腦對接與雙向事件中樞 (`minecraft_manager.py` / `server.py`)**：
+    - 新增 `/api/minecraft/status`、`/api/minecraft/control`、`/api/minecraft/chat` 與 `/api/minecraft/event` API 端點。
+    - 遊戲內玩家聊天即時透過 `BasicMemoryAgent` 注入生態系、血量與世界環境上下文，動態解析並回傳 `[mc:follow]` / `[mc:stop]` / `[mc:dance]` / `[mc:sleep]` 遊戲控制標籤。
+    - 遊戲內贈禮（花朵 +10、鑽石 +30、食物 +5）自動增加 Soul-Link 好感度並寫入長期回憶日記。
+  - **桌寵生物微表情與受傷痛痛即時聯動 (`emilia_biometric_enhancer.js`)**：
+    - 透過 WebSocket 接收遊戲事件廣播：扣血受傷觸發泛淚委屈微表情（`exp_14_sad`）與受傷浮動通知；收到禮物觸發臉紅害羞表情（`exp_04_blush`）、風鈴音效與愛心動畫。
+  - **網頁控制台「⛏️ Minecraft 異世界冒險同伴」面板 (`WebToolMenu.tsx`)**：
+    - 內建伺服器位址 (Host)、Port (預設 25565)、角色暱稱設定，提供一鍵「▶ 連線進入 Minecraft」與「⏹ 中斷連線」。
+    - 顯示即時體力 (HP)、飽食度與生態系數值，並提供「🏃 跟隨我」、「⏹ 原地待命」、「💃 篝火跳舞」、「🌙 找床睡覺」快捷互動按鈕。
+
+### [v2.4.0] - 2026-11-18
 - **多使用者帳號機制與獨立記憶隔離 (`Multi-User Accounts & Isolated Memory Segregation`)**：
   - **SQLite 資料庫持久化 (`cache/emilia_companion.db`)**：採用 WAL 模式，管理 `users` 與 `companion_states`，PBKDF2-HMAC-SHA256 安全雜湊與 PyJWT 授權驗證。
   - **預設管理員與歷史資料自動平滑遷移**：開箱即用 `username: siewilly`，初始密碼 `backey513`，暱稱 `有栖`，無縫繼承既有 270 分好感度與 467 條長期記憶。

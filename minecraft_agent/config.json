@@ -1,0 +1,13 @@
+{
+  "host": "localhost",
+  "port": 25565,
+  "username": "Emilia",
+  "auth": "offline",
+  "version": false,
+  "masterPlayer": "",
+  "backendUrl": "http://127.0.0.1:12393",
+  "autoReconnect": true,
+  "reconnectIntervalMs": 5000,
+  "followDistance": 2.5,
+  "autoDefend": true
+}
