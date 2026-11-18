@@ -46,6 +46,23 @@
 
 ## 📜 版本更新紀錄 (Version History / Changelog)
 
+### [v2.0.0] - 2026-11-18
+- **Omni-Net 全套聯網架構、Discord 機器人連動與點歌全身節奏熱舞系統實裝 (`Omni-Net & Soul-Link + DC Bot + Rhythm Dance`)**：
+  - **1. 後端聯網智慧中樞 (`Open-LLM-VTuber/src/open_llm_vtuber/utils/internet_hub.py` & `basic_memory_agent.py`)**：
+    - **A1 即時聯網搜尋 (`search_web_instant`)**：結合 Google News 台灣版頭條 RSS 與中文維基百科 OpenSearch API，當詢問時事或知識時自動聯網檢索注入系統提示。
+    - **A2 網頁與 YouTube 導讀 (`extract_url_content`)**：偵測對話中的網址時，自動透過 YouTube oEmbed、Jina Reader 與 HTML 清洗回傳摘要供愛蜜莉雅導讀。
+    - **A3 台灣即時天氣感知 (`get_taiwan_weather`)**：對接免費 Open-Meteo 氣象資料（含 15 分鐘快取），即時注入溫度、體感與天氣狀況至對話與網頁頂部 HUD。
+    - **B1 + B2 動漫科技頭條與晨間簡報 (`fetch_acg_and_tech_news` / `/api/internet-briefing`)**：整合巴哈姆特 GNN 與 Google 新聞 ACG／AI 科技 RSS，並於網頁端提供「☀️ 今日晨間簡報」一鍵播報。
+    - **點歌意圖識別 (`detect_music_command`)**：識別點歌、換歌與停止音樂指令，注入 `[bgm:play:...]` / `[bgm:next]` / `[bgm:stop]` 與 `[motion:happy]` 控制標籤。
+  - **2. C1 跨裝置靈魂同步 & C2 手機 PWA 與 QR 配對 (`server.py`, `manifest.webmanifest`, `index.html`, `WebToolMenu.tsx`)**：
+    - 新增 `/api/companion-state` (GET/POST) 將好感度 (`intimacyScore`)、愛稱、回憶日記與音樂狀態原子合併至 `cache/companion_state.json`，打通桌寵、網頁與 Discord 同步。
+    - 加入 PWA 設定與 iOS/Android 安全區適配；新增 `/api/network-info` 自動探測區網 IP 與 Cloudflare Tunnel 網址，並於 `WebToolMenu` 內建純 TypeScript ISO-18004 QR Code 掃碼配對卡片。
+  - **3. Discord Bot 雙向連動引擎 (`Open-LLM-VTuber/src/open_llm_vtuber/discord_bot.py` & `/api/discord-config`)**：
+    - 使用既有 `websockets` + `httpx` 實作免額外相依的 Discord Gateway v10 + REST v10 橋接器（支援 DM、@提及與 `!emilia` / `!weather` / `!briefing` / `!sing` 指令），共用記憶池與 Soul-Link 好感度，並支援附加 **Fish Audio TTS 日語語音檔附件** 回覆；網頁控制台新增一鍵設定 Token 與啟停面板。
+  - **4. 多聲部音樂合成器 ＋ 音訊頻譜全身節奏熱舞 (`emilia_biometric_enhancer.js`, `WebView.tsx`)**：
+    - 擴充 5 首多聲部（主旋律＋和弦伴奏＋低音）曲庫：《Stay Alive》、《Wishing》、《Realize (124 BPM)》、《異世界暖陽 Lofi》、《微精靈之歌》，搭配 `AnalyserNode` 頻譜能量與節拍脈衝。
+    - `applyBiometrics` 於播放音樂時同步驅動 **頭部三軸搖擺點頭 (`PARAM_ANGLE_X/Y/Z`)、軀幹搖擺與彈跳 (`PARAM_BODY_ANGLE_X/Y/Z`, `PARAM_POSITION_Y`, `PARAM_STRETCH`, `PARAM_SHOLDER_POSITION`)、雙臂手腕揮舞 (`PARAM_SHOULDER/ARM/HAND_L/R_ROTATE`)、秀髮裙擺物理及微笑神情**；文字/快捷點歌皆可零延遲觸發。
+
 ### [v1.10.0] - 2026-11-18
 - **桌寵「接續歷史聊天」功能與統一造型記憶池實裝 (`Chat History Continuity`)**：
   - **1. 統一愛蜜莉雅造型記憶池與歷史紀錄合併 (`characters/emilia_4star*.yaml` / `chat_history/`)**：
