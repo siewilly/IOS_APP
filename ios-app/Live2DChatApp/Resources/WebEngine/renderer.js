@@ -73,14 +73,35 @@
     layoutModel();
     window.addEventListener('resize', layoutModel);
 
-    // Interactive tap response (fallback/direct touch)
+    // Interactive tap response (摸頭與戳臉精準判定)
     canvas.addEventListener('pointerup', (e) => {
       wakeToActiveFPS(3);
-      const ratioY = e.clientY / (window.innerHeight || 844);
-      if (ratioY < 0.4) {
+      const w = window.innerWidth || 390;
+      const h = window.innerHeight || 844;
+      const ratioX = e.clientX / w;
+      const ratioY = e.clientY / h;
+
+      if (ratioY < 0.35) {
+        // 摸頭 (Head Patting / Stroking)
         triggerMotion('TapHead');
+        setExpression('exp_01_subtle_smile');
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live2dTap) {
+          window.webkit.messageHandlers.live2dTap.postMessage({ area: 'head' });
+        }
+      } else if (ratioY >= 0.35 && ratioY < 0.48 && ratioX >= 0.25 && ratioX <= 0.75) {
+        // 戳臉頰 (Cheek Poke / Blushing)
+        triggerMotion('Shy');
+        setExpression('exp_05_shy');
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live2dTap) {
+          window.webkit.messageHandlers.live2dTap.postMessage({ area: 'cheek' });
+        }
       } else {
+        // 身體 (Body Tap)
         triggerMotion('TapBody');
+        setExpression('exp_04_smug');
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live2dTap) {
+          window.webkit.messageHandlers.live2dTap.postMessage({ area: 'body' });
+        }
       }
     });
 

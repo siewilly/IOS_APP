@@ -58,6 +58,7 @@ public struct Live2DWebView: UIViewRepresentable {
         let contentController = WKUserContentController()
         contentController.add(context.coordinator, name: "live2dReady")
         contentController.add(context.coordinator, name: "live2dError")
+        contentController.add(context.coordinator, name: "live2dTap")
         config.userContentController = contentController
 
         let webView = WKWebView(frame: .zero, configuration: config)
@@ -112,6 +113,10 @@ public struct Live2DWebView: UIViewRepresentable {
                 }
             } else if message.name == "live2dError" {
                 print("[Live2DWebView] Live2D WebEngine report error:", message.body)
+            } else if message.name == "live2dTap" {
+                if let dict = message.body as? [String: Any], let area = dict["area"] as? String {
+                    print("[Live2DWebView] Live2D Tap detected on area: \(area)")
+                }
             }
         }
     }
