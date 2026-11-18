@@ -1,6 +1,7 @@
 /**
  * Live2D Anti-Overheating WebEngine Renderer
  * Designed for iOS WKWebView low-power operation
+ * Synchronized with v2.3.0 Biometric & Precise Hit Testing Engine
  */
 (async function initLive2DRenderer() {
   const canvas = document.getElementById('canvas');
@@ -29,7 +30,7 @@
   let isSpeaking = false;
   let live2dModel = null;
 
-  function wakeToActiveFPS(durationSeconds = 2) {
+  function wakeToActiveFPS(durationSeconds = 2.5) {
     app.ticker.maxFPS = ACTIVE_FPS;
     if (boostTimer) {
       clearTimeout(boostTimer);
@@ -73,39 +74,69 @@
     layoutModel();
     window.addEventListener('resize', layoutModel);
 
-    // Interactive tap response (摸頭與戳臉精準判定)
+    // 4. v2.3.0 精準觸控感應（摸頭、戳臉、摸下巴、契約水晶、拉衣角、牽手）
     canvas.addEventListener('pointerup', (e) => {
-      wakeToActiveFPS(3);
+      wakeToActiveFPS(3.5);
       const w = window.innerWidth || 390;
       const h = window.innerHeight || 844;
-      const ratioX = e.clientX / w;
-      const ratioY = e.clientY / h;
 
-      if (ratioY < 0.35) {
-        // 摸頭 (Head Patting / Stroking)
+      const modelW = (live2dModel.internalModel.width || 1200) * live2dModel.scale.x;
+      const modelH = (live2dModel.internalModel.height || 1200) * live2dModel.scale.y;
+      const modelCenterX = live2dModel.x + modelW / 2;
+      const modelTopY = live2dModel.y;
+
+      // 正規化座標：normX (-1.0 到 +1.0，0 為臉部中心)，normY (0.0 頂部到 1.0 底部)
+      const normX = (e.clientX - modelCenterX) / (modelW / 2);
+      const normY = (e.clientY - modelTopY) / modelH;
+
+      let part = 'body';
+      let toast = '🌸 愛蜜莉雅溫柔地注視著你...';
+
+      if (normY < 0.36 && Math.abs(normX) <= 0.70) {
+        // 1. 摸摸銀髮 / 摸頭
+        part = 'head';
+        toast = '✋ 輕撫銀髮，愛蜜莉雅舒服地瞇起眼睛～';
         triggerMotion('TapHead');
         setExpression('exp_01_subtle_smile');
-        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live2dTap) {
-          window.webkit.messageHandlers.live2dTap.postMessage({ area: 'head' });
-        }
-      } else if (ratioY >= 0.35 && ratioY < 0.48 && ratioX >= 0.25 && ratioX <= 0.75) {
-        // 戳臉頰 (Cheek Poke / Blushing)
+      } else if (normY >= 0.36 && normY < 0.48 && Math.abs(normX) >= 0.16 && Math.abs(normX) <= 0.65) {
+        // 2. 戳戳臉頰（縮頸害羞）
+        part = 'cheek';
+        toast = '😳 戳戳臉頰，愛蜜莉雅害羞地縮了下脖子！';
         triggerMotion('Shy');
         setExpression('exp_05_shy');
-        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live2dTap) {
-          window.webkit.messageHandlers.live2dTap.postMessage({ area: 'cheek' });
-        }
-      } else {
-        // 身體 (Body Tap)
+      } else if (normY >= 0.44 && normY < 0.52 && Math.abs(normX) < 0.18) {
+        // 3. 摸摸下巴（逗笑開懷）
+        part = 'chin';
+        toast = '❄️ 摸摸下巴，愛蜜莉雅開心地笑了～';
+        triggerMotion('Happy');
+        setExpression('exp_02_happy_big');
+      } else if (normY >= 0.52 && normY < 0.64 && Math.abs(normX) <= 0.25) {
+        // 4. 契約水晶（共鳴依偎）
+        part = 'crystal';
+        toast = '💎 輕觸契約水晶，微光與心跳柔和共鳴...';
+        triggerMotion('Appeal');
+        setExpression('exp_21_adoration_sparkle');
+      } else if (normY >= 0.50 && normY < 0.66 && Math.abs(normX) > 0.25) {
+        // 5. 輕拉衣角 / 輕拍肩
+        part = 'shoulder';
+        toast = '🌿 輕拉衣角，愛蜜莉雅轉頭望向你～';
         triggerMotion('TapBody');
         setExpression('exp_04_smug');
-        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live2dTap) {
-          window.webkit.messageHandlers.live2dTap.postMessage({ area: 'body' });
-        }
+      } else {
+        // 6. 牽牽手 / 身體互動
+        part = 'hand';
+        toast = '🤝 牽牽小手，感到無比安心...';
+        triggerMotion('TapBody');
+        setExpression('exp_01_subtle_smile');
+      }
+
+      // 通知 Swift 原生端顯示互動回饋
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live2dTap) {
+        window.webkit.messageHandlers.live2dTap.postMessage({ area: part, text: toast });
       }
     });
 
-    // 4. Lip-sync synchronization hook
+    // 5. Lip-sync synchronization hook
     // Override mouth open parameter on every rendered tick
     app.ticker.add(() => {
       if (!live2dModel || !live2dModel.internalModel || !live2dModel.internalModel.coreModel) return;
@@ -120,7 +151,7 @@
     if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live2dReady) {
       window.webkit.messageHandlers.live2dReady.postMessage({ status: 'ready' });
     }
-    console.log('[Live2D WebEngine] Model successfully loaded at 12 FPS idle profile.');
+    console.log('[Live2D WebEngine] v2.3.0 Model successfully loaded at 12 FPS idle profile.');
   } catch (error) {
     console.error('[Live2D WebEngine] Failed to initialize model:', error);
     if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live2dError) {
@@ -128,7 +159,7 @@
     }
   }
 
-  // 5. Swift Bridge Implementation
+  // 6. Swift Bridge Implementation
   function setMouthOpen(value) {
     const val = Math.max(0, Math.min(1, Number(value) || 0));
     currentMouthOpen = val;

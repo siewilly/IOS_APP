@@ -9,6 +9,8 @@ public struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var inputText: String = ""
     @State private var isSettingsPresented: Bool = false
+    @State private var touchToastText: String? = nil
+    @State private var toastDismissTask: Task<Void, Never>? = nil
     @FocusState private var isInputFocused: Bool
 
     public init() {}
@@ -59,6 +61,27 @@ public struct ContentView: View {
                 bottomInputBar
                     .padding(.horizontal, 16)
                     .padding(.bottom, 8)
+            }
+
+            // 4. Floating Touch Interaction Toast (摸頭/戳臉即時回饋)
+            if let toast = touchToastText {
+                VStack {
+                    Text(toast)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            Capsule()
+                                .fill(Color(red: 0.22, green: 0.16, blue: 0.38).opacity(0.92))
+                                .overlay(Capsule().stroke(Color(red: 0.75, green: 0.60, blue: 1.0).opacity(0.4), lineWidth: 1))
+                        )
+                        .shadow(color: Color.purple.opacity(0.4), radius: 8, x: 0, y: 3)
+                        .padding(.top, 56)
+                    Spacer()
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(10)
             }
         }
         .sheet(isPresented: $isSettingsPresented) {
@@ -263,6 +286,21 @@ public struct ContentView: View {
         networkService.onInterrupt = { [weak lipSyncManager] in
             Task { @MainActor in
                 lipSyncManager?.stopAll()
+            }
+        }
+
+        bridgeController.onTouchReaction = { [self] area, text in
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                touchToastText = text
+            }
+            toastDismissTask?.cancel()
+            toastDismissTask = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 2_600_000_000)
+                if !Task.isCancelled {
+                    withAnimation(.easeOut(duration: 0.3)) {
+                        touchToastText = nil
+                    }
+                }
             }
         }
     }

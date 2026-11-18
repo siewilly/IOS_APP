@@ -5,6 +5,7 @@ import WebKit
 public final class Live2DBridgeController: ObservableObject {
     public weak var webView: WKWebView?
     @Published public var isEngineReady: Bool = false
+    public var onTouchReaction: ((String, String) -> Void)?
 
     public init() {}
 
@@ -114,8 +115,12 @@ public struct Live2DWebView: UIViewRepresentable {
             } else if message.name == "live2dError" {
                 print("[Live2DWebView] Live2D WebEngine report error:", message.body)
             } else if message.name == "live2dTap" {
-                if let dict = message.body as? [String: Any], let area = dict["area"] as? String {
-                    print("[Live2DWebView] Live2D Tap detected on area: \(area)")
+                if let dict = message.body as? [String: Any],
+                   let area = dict["area"] as? String,
+                   let text = dict["text"] as? String {
+                    Task { @MainActor in
+                        self.parent.controller.onTouchReaction?(area, text)
+                    }
                 }
             }
         }
