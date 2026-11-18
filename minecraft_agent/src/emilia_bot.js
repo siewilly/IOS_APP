@@ -3,7 +3,7 @@
 const mineflayer = require('mineflayer');
 const { pathfinder, Movements } = require('mineflayer-pathfinder');
 const pvp = require('mineflayer-pvp').plugin;
-const autoEat = require('mineflayer-auto-eat').plugin;
+const autoEat = require('mineflayer-auto-eat').loader;
 
 const { FollowBehavior } = require('./behavior/follow');
 const { CombatBehavior } = require('./behavior/combat');
@@ -93,9 +93,21 @@ class EmiliaBot {
   }
 
   _bindPlugins() {
-    this.bot.loadPlugin(pathfinder);
-    this.bot.loadPlugin(pvp);
-    this.bot.loadPlugin(autoEat);
+    try {
+      this.bot.loadPlugin(pathfinder);
+    } catch (e) {
+      console.warn('[EmiliaBot] Pathfinder plugin load error:', e.message);
+    }
+    try {
+      this.bot.loadPlugin(pvp);
+    } catch (e) {
+      console.warn('[EmiliaBot] PvP plugin load error:', e.message);
+    }
+    try {
+      this.bot.loadPlugin(autoEat);
+    } catch (e) {
+      console.warn('[EmiliaBot] AutoEat plugin load error:', e.message);
+    }
 
     this.bot.masterPlayer = this.config.masterPlayer || '有栖';
     this.follow = new FollowBehavior(this.bot, this.config);
@@ -137,26 +149,48 @@ class EmiliaBot {
       this.lastHealth = this.bot.health || 20;
       this.reporter.startStatusPolling(this.bot, 3000);
 
+      // 自動套用愛蜜莉雅專屬皮膚 (FabricTailor / SkinsRestorer)
+      setTimeout(() => {
+        try {
+          const skinUrl = 'https://files.catbox.moe/8fpx2h.png';
+          this.bot.chat(`/skin set ${skinUrl}`);
+          console.log(`[EmiliaBot] Set skin via: /skin set ${skinUrl}`);
+        } catch (e) {}
+      }, 800);
+
       // 進服問候語
       setTimeout(() => {
         try {
           const master = this.config.masterPlayer || '有栖';
           this.bot.chat(`${master}、準備好了嗎？愛蜜莉雅參上！今天也一起在異世界努力吧！🌸`);
         } catch (e) {}
-      }, 1200);
+      }, 1500);
     });
 
     // 玩家聊天室監聽
     this.bot.on('chat', (username, message) => {
       if (username === this.bot.username) return;
       console.log(`[MC-Chat] <${username}> ${message}`);
-      this.brain.processPlayerChat(username, message);
+      if (this.brain) this.brain.processPlayerChat(username, message);
     });
 
     this.bot.on('whisper', (username, message) => {
       if (username === this.bot.username) return;
       console.log(`[MC-Whisper] <${username}> ${message}`);
-      this.brain.processPlayerChat(username, message);
+      if (this.brain) this.brain.processPlayerChat(username, message);
+    });
+
+    // 備援監聽 messagestr（處理 Paper/Fabric 伺服器自定義 chat 格式）
+    this.bot.on('messagestr', (message) => {
+      if (!message || message.startsWith(`[Emilia]`) || message.includes('愛蜜莉雅')) return;
+      const match = message.match(/^(?:\[Not Secure\]\s*)?<([a-zA-Z0-9_]+)>\s*(.+)$/);
+      if (match) {
+        const [, sender, text] = match;
+        if (sender !== this.bot.username && this.brain) {
+          console.log(`[MC-MessageStr] Captured chat: <${sender}> ${text}`);
+          this.brain.processPlayerChat(sender, text);
+        }
+      }
     });
 
     // 受傷監聽 (觸發桌寵痛痛哭哭微表情)
