@@ -5,9 +5,9 @@
     "Fps": 30.0,
     "Loop": false,
     "AreBeziersRestricted": true,
-    "CurveCount": 113,
-    "TotalSegmentCount": 255,
-    "TotalPointCount": 311,
+    "CurveCount": 112,
+    "TotalSegmentCount": 254,
+    "TotalPointCount": 309,
     "UserDataCount": 0,
     "TotalUserDataSize": 0,
     "FadeInTime": 0.5,
@@ -948,17 +948,6 @@
     {
       "Target": "Parameter",
       "Id": "PARAM_TEAR_LEAP_01",
-      "Segments": [
-        0,
-        0,
-        0,
-        6.5,
-        0
-      ]
-    },
-    {
-      "Target": "Parameter",
-      "Id": "PARAM_MOUTH_OPEN_Y",
       "Segments": [
         0,
         0,

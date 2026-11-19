@@ -12,11 +12,6 @@
           "File": "motions/00_Wait_Idle_Clean.motion3.json",
           "FadeInTime": 0.5,
           "FadeOutTime": 0.5
-        },
-        {
-          "File": "motions/00_Wait_01.motion3.json",
-          "FadeInTime": 0.8,
-          "FadeOutTime": 0.8
         }
       ],
       "Talk": [
@@ -203,6 +198,38 @@
           "File": "motions/00_ShySmile_01.motion3.json",
           "FadeInTime": 0.4,
           "FadeOutTime": 0.6
+        }
+      ],
+      "IdleMacro": [
+        {
+          "File": "motions/00_Appeal_01.motion3.json",
+          "FadeInTime": 1.2,
+          "FadeOutTime": 1.2
+        },
+        {
+          "File": "motions/00_Pride_01.motion3.json",
+          "FadeInTime": 1.2,
+          "FadeOutTime": 1.2
+        },
+        {
+          "File": "motions/00_Puzzle_01.motion3.json",
+          "FadeInTime": 1.2,
+          "FadeOutTime": 1.2
+        },
+        {
+          "File": "motions/00_Navi_01.motion3.json",
+          "FadeInTime": 1.2,
+          "FadeOutTime": 1.2
+        },
+        {
+          "File": "motions/00_Shame_01.motion3.json",
+          "FadeInTime": 1.2,
+          "FadeOutTime": 1.2
+        },
+        {
+          "File": "motions/00_Happy_02.motion3.json",
+          "FadeInTime": 1.2,
+          "FadeOutTime": 1.2
         }
       ]
     },

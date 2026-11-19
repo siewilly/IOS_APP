@@ -30,9 +30,37 @@ public final class Live2DBridgeController: ObservableObject {
         webView?.evaluateJavaScript(script, completionHandler: nil)
     }
 
+    /// Notify Desktop-Pet-parity motion orchestrator that a spoken audio chunk started playing
+    public func onChunkStart(rawText: String, durationMs: Int) {
+        let safeJson: String
+        if let data = try? JSONSerialization.data(withJSONObject: [rawText]),
+           let arrStr = String(data: data, encoding: .utf8),
+           arrStr.count >= 2 {
+            // Strip outer [ and ] to get a safely JSON-escaped JS string literal
+            safeJson = String(arrStr.dropFirst().dropLast())
+        } else {
+            safeJson = "\"\""
+        }
+        let script = "if (window.Live2DBridge && window.Live2DBridge.onChunkStart) { window.Live2DBridge.onChunkStart(\(safeJson), \(durationMs)); }"
+        webView?.evaluateJavaScript(script, completionHandler: nil)
+    }
+
+    /// Notify that the entire conversation turn finished playing (triggers smooth settleToIdle)
+    public func onPlaybackComplete() {
+        let script = "if (window.Live2DBridge && window.Live2DBridge.onPlaybackComplete) { window.Live2DBridge.onPlaybackComplete(); }"
+        webView?.evaluateJavaScript(script, completionHandler: nil)
+    }
+
+    /// Notify that speech was interrupted (clears pending chunk motion timers and settles cleanly)
+    public func onInterrupt() {
+        let script = "if (window.Live2DBridge && window.Live2DBridge.onInterrupt) { window.Live2DBridge.onInterrupt(); }"
+        webView?.evaluateJavaScript(script, completionHandler: nil)
+    }
+
     /// Set a facial expression by ID or name
     public func setExpression(_ expId: String) {
-        let script = "if (window.Live2DBridge) { window.Live2DBridge.setExpression('\(expId)'); }"
+        let escaped = expId.replacingOccurrences(of: "'", with: "\\'")
+        let script = "if (window.Live2DBridge) { window.Live2DBridge.setExpression('\(escaped)'); }"
         webView?.evaluateJavaScript(script, completionHandler: nil)
     }
 

@@ -603,14 +603,29 @@ public struct ContentView: View {
     // MARK: - Actions & Wiring
     private func setupServices() {
         lipSyncManager.bridgeController = bridgeController
+        lipSyncManager.onAllPlaybackComplete = { [weak networkService] in
+            networkService?.sendPlaybackComplete()
+        }
 
-        networkService.onAudioReceived = { [weak lipSyncManager] audioData, displayText, actions, motionGroup, expressionName, cleanText in
+        networkService.onConversationStart = { [weak lipSyncManager] in
+            Task { @MainActor in
+                lipSyncManager?.beginConversationTurn()
+            }
+        }
+
+        networkService.onBackendSynthComplete = { [weak lipSyncManager] in
+            Task { @MainActor in
+                lipSyncManager?.markBackendSynthComplete()
+            }
+        }
+
+        networkService.onAudioReceived = { [weak lipSyncManager] audioData, displayText, actions, rawText, expressionName, cleanText in
             Task { @MainActor in
                 lipSyncManager?.enqueue(
                     audioData: audioData,
                     displayText: displayText,
                     actions: actions,
-                    motionGroup: motionGroup,
+                    rawText: rawText,
                     expressionName: expressionName,
                     cleanText: cleanText
                 )

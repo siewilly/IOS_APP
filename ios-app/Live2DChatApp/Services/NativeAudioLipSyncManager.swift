@@ -10,7 +10,7 @@ public final class NativeAudioLipSyncManager: NSObject, ObservableObject, AVAudi
         public let data: Data
         public let displayText: ServerDisplayText?
         public let actions: ServerAction?
-        public let motionGroup: String?
+        public let rawText: String?
         public let expressionName: String?
         public let cleanText: String?
 
@@ -18,14 +18,14 @@ public final class NativeAudioLipSyncManager: NSObject, ObservableObject, AVAudi
             data: Data,
             displayText: ServerDisplayText? = nil,
             actions: ServerAction? = nil,
-            motionGroup: String? = nil,
+            rawText: String? = nil,
             expressionName: String? = nil,
             cleanText: String? = nil
         ) {
             self.data = data
             self.displayText = displayText
             self.actions = actions
-            self.motionGroup = motionGroup
+            self.rawText = rawText
             self.expressionName = expressionName
             self.cleanText = cleanText
         }
@@ -33,10 +33,13 @@ public final class NativeAudioLipSyncManager: NSObject, ObservableObject, AVAudi
 
     @Published public var isPlaying: Bool = false
     public weak var bridgeController: Live2DBridgeController?
+    public var onAllPlaybackComplete: (() -> Void)?
 
     private var audioPlayer: AVAudioPlayer?
     private var displayLink: CADisplayLink?
     private var queue: [AudioQueueItem] = []
+    private var backendSynthComplete: Bool = false
+    private var fallbackIdleWorkItem: DispatchWorkItem?
     private let silenceThresholdDB: Float = -45.0
 
     public override init() {
@@ -54,20 +57,36 @@ public final class NativeAudioLipSyncManager: NSObject, ObservableObject, AVAudi
         }
     }
 
-    /// Enqueue an audio packet for playback, gesture animations, and lip-syncing
+    /// Reset turn state when a new conversation chain starts
+    public func beginConversationTurn() {
+        backendSynthComplete = false
+        fallbackIdleWorkItem?.cancel()
+        fallbackIdleWorkItem = nil
+    }
+
+    /// Called when server sends `backend-synth-complete` (exact desktop pet parity)
+    public func markBackendSynthComplete() {
+        backendSynthComplete = true
+        checkAndFinalizePlayback()
+    }
+
+    /// Enqueue an audio packet for playback, Desktop-Pet-parity motion orchestration, and lip-syncing
     public func enqueue(
         audioData: Data,
         displayText: ServerDisplayText? = nil,
         actions: ServerAction? = nil,
-        motionGroup: String? = nil,
+        rawText: String? = nil,
         expressionName: String? = nil,
         cleanText: String? = nil
     ) {
+        fallbackIdleWorkItem?.cancel()
+        fallbackIdleWorkItem = nil
+
         let item = AudioQueueItem(
             data: audioData,
             displayText: displayText,
             actions: actions,
-            motionGroup: motionGroup,
+            rawText: rawText ?? displayText?.text,
             expressionName: expressionName,
             cleanText: cleanText
         )
@@ -82,33 +101,46 @@ public final class NativeAudioLipSyncManager: NSObject, ObservableObject, AVAudi
         guard !queue.isEmpty else {
             stopDisplayLink()
             bridgeController?.setMouthOpen(0.0)
-            // Settle smoothly back to natural idle posture & neutral face when speech finishes
-            bridgeController?.triggerMotion(group: "Idle")
-            bridgeController?.setExpression("exp_00_neutral")
             self.isPlaying = false
+
+            // DO NOT abruptly reset to Idle between chunks!
+            // Only finalize & settle smoothly once the ENTIRE turn finishes (backend-synth-complete + queue empty).
+            if backendSynthComplete {
+                checkAndFinalizePlayback()
+            } else {
+                // Safety net if server never sends backend-synth-complete (e.g. network hiccup)
+                let fallback = DispatchWorkItem { [weak self] in
+                    guard let self = self, !self.isPlaying, self.queue.isEmpty else { return }
+                    self.bridgeController?.onPlaybackComplete()
+                }
+                fallbackIdleWorkItem = fallback
+                DispatchQueue.main.asyncAfter(deadline: .now() + 4.5, execute: fallback)
+            }
             return
         }
 
+        fallbackIdleWorkItem?.cancel()
+        fallbackIdleWorkItem = nil
+
         let item = queue.removeFirst()
 
-        // 1. Trigger dynamic body motion for this spoken sentence
-        // If an emotion-specific motion was parsed, play it; otherwise default to "Talk" group
-        // so Emilia actively moves her arms and body naturally while speaking!
-        let targetMotion = item.motionGroup ?? "Talk"
-        bridgeController?.triggerMotion(group: targetMotion)
-
-        // 2. Trigger synchronized facial expression
-        if let exp = item.expressionName {
-            bridgeController?.setExpression(exp)
-        }
-
         do {
-            audioPlayer = try AVAudioPlayer(data: item.data)
-            audioPlayer?.delegate = self
-            audioPlayer?.isMeteringEnabled = true
-            audioPlayer?.prepareToPlay()
-            audioPlayer?.play()
+            let player = try AVAudioPlayer(data: item.data)
+            player.delegate = self
+            player.isMeteringEnabled = true
+            player.prepareToPlay()
+            self.audioPlayer = player
 
+            // 1. Apply synchronized facial expression at the exact moment this chunk starts playing
+            if let exp = item.expressionName, !exp.isEmpty {
+                bridgeController?.setExpression(exp)
+            }
+
+            // 2. Drive Desktop-Pet-parity multi-tag motion orchestrator with exact audio duration!
+            let durationMs = Int(player.duration * 1000.0)
+            bridgeController?.onChunkStart(rawText: item.rawText ?? "", durationMs: durationMs)
+
+            player.play()
             self.isPlaying = true
             startDisplayLink()
         } catch {
@@ -117,11 +149,22 @@ public final class NativeAudioLipSyncManager: NSObject, ObservableObject, AVAudi
         }
     }
 
+    private func checkAndFinalizePlayback() {
+        guard backendSynthComplete, queue.isEmpty, !isPlaying else { return }
+        backendSynthComplete = false
+        fallbackIdleWorkItem?.cancel()
+        fallbackIdleWorkItem = nil
+
+        // Notify backend (`frontend-playback-complete`) and let WebEngine smoothly settle to Idle
+        onAllPlaybackComplete?()
+        bridgeController?.onPlaybackComplete()
+    }
+
     private func startDisplayLink() {
         stopDisplayLink()
         let link = CADisplayLink(target: self, selector: #selector(handleDisplayLinkTick))
-        // Target 20 FPS to minimize CPU overhead while ensuring smooth mouth movement
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: 15, maximum: 20, preferred: 20)
+        // 30 FPS gives responsive vowel lip-sync and accurate speech-gesture stress beat detection
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 20, maximum: 30, preferred: 30)
         link.add(to: .main, forMode: .common)
         self.displayLink = link
     }
@@ -144,9 +187,8 @@ public final class NativeAudioLipSyncManager: NSObject, ObservableObject, AVAudi
         let clamped = max(silenceThresholdDB, min(0.0, avgPower))
         let linear = (clamped - silenceThresholdDB) / (-silenceThresholdDB) // 0.0 ... 1.0
 
-        // Apply a gentle power curve for dynamic, natural mouth aperture
-        let mouthOpen = Double(pow(linear, 1.25))
-
+        // Natural acoustic scaling (matching desktop pet lipSyncScale = 1.25)
+        let mouthOpen = min(1.0, Double(pow(linear, 1.15)) * 1.15)
         bridgeController?.setMouthOpen(mouthOpen)
     }
 
@@ -169,12 +211,14 @@ public final class NativeAudioLipSyncManager: NSObject, ObservableObject, AVAudi
     /// Immediately stop all audio and cancel pending queue (e.g. user interruption or background transition)
     public func stopAll() {
         queue.removeAll()
+        backendSynthComplete = false
+        fallbackIdleWorkItem?.cancel()
+        fallbackIdleWorkItem = nil
         audioPlayer?.stop()
         audioPlayer = nil
         stopDisplayLink()
         bridgeController?.setMouthOpen(0.0)
-        bridgeController?.triggerMotion(group: "Idle")
-        bridgeController?.setExpression("exp_00_neutral")
+        bridgeController?.onInterrupt()
         self.isPlaying = false
     }
 }

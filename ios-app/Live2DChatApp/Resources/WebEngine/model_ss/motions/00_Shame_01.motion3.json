@@ -5,9 +5,9 @@
     "Fps": 30.0,
     "Loop": false,
     "AreBeziersRestricted": true,
-    "CurveCount": 97,
-    "TotalSegmentCount": 226,
-    "TotalPointCount": 236,
+    "CurveCount": 96,
+    "TotalSegmentCount": 225,
+    "TotalPointCount": 234,
     "UserDataCount": 0,
     "TotalUserDataSize": 0,
     "FadeInTime": 0.5,
@@ -878,17 +878,6 @@
         0,
         3.5,
         -0.5
-      ]
-    },
-    {
-      "Target": "Parameter",
-      "Id": "PARAM_MOUTH_OPEN_Y",
-      "Segments": [
-        0,
-        0,
-        0,
-        3.5,
-        0
       ]
     },
     {

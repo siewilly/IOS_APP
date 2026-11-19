@@ -16,6 +16,8 @@ public final class ChatNetworkService: NSObject, ObservableObject, URLSessionWeb
     public var onMotion: ((String) -> Void)?
     public var onInterrupt: (() -> Void)?
     public var onAuthRequired: (() -> Void)?
+    public var onConversationStart: (() -> Void)?
+    public var onBackendSynthComplete: (() -> Void)?
 
     private var webSocketTask: URLSessionWebSocketTask?
     private var session: URLSession?
@@ -137,6 +139,10 @@ public final class ChatNetworkService: NSObject, ObservableObject, URLSessionWeb
         sendJSON(["type": "auth", "token": token])
     }
 
+    public func sendPlaybackComplete() {
+        sendJSON(["type": "frontend-playback-complete"])
+    }
+
     private func sendJSON(_ dict: [String: Any]) {
         guard let data = try? JSONSerialization.data(withJSONObject: dict),
               let string = String(data: data, encoding: .utf8) else {
@@ -231,6 +237,9 @@ public final class ChatNetworkService: NSObject, ObservableObject, URLSessionWeb
             case "audio":
                 self.handleAudioMessage(json: json, rawData: data)
 
+            case "backend-synth-complete":
+                self.onBackendSynthComplete?()
+
             case "history-data":
                 if let messagesArr = json["messages"] as? [[String: Any]] {
                     self.handleHistoryData(messagesArr)
@@ -252,6 +261,7 @@ public final class ChatNetworkService: NSObject, ObservableObject, URLSessionWeb
         switch control {
         case "conversation-chain-start":
             self.isAiThinkingOrSpeaking = true
+            self.onConversationStart?()
         case "conversation-chain-end":
             self.isAiThinkingOrSpeaking = false
         case "interrupt":
@@ -407,46 +417,49 @@ public final class ChatNetworkService: NSObject, ObservableObject, URLSessionWeb
     }
 
     private func handleAudioMessage(json: [String: Any], rawData: Data) {
-        // Decode ServerAudioPayload
+        // Decode ServerAudioPayload (ServerAction now handles both Int and String expressions!)
         guard let payload = try? JSONDecoder().decode(ServerAudioPayload.self, from: rawData) else {
+            print("[ChatNetworkService] Failed to decode ServerAudioPayload")
             return
         }
 
-        var motionGroup: String? = nil
-        var expressionName: String? = nil
+        let rawText = payload.display_text?.text ?? ""
+        var expressionName: String? = payload.actions?.expressions?.first
         var cleanedText: String = ""
+        var fallbackMotionGroup: String? = payload.actions?.motions?.first
 
-        // 1. Text display & tag extraction
-        if let displayText = payload.display_text, let text = displayText.text, !text.isEmpty {
-            let tags = ChatNetworkService.parseTags(from: text)
-            motionGroup = tags.motionGroup
-            expressionName = tags.expressionName
+        // 1. Text display sanitization & fallback tag extraction
+        if !rawText.isEmpty {
+            let tags = ChatNetworkService.parseTags(from: rawText)
+            if expressionName == nil {
+                expressionName = tags.expressionName
+            }
+            if fallbackMotionGroup == nil {
+                fallbackMotionGroup = tags.motionGroup
+            }
             cleanedText = tags.cleanText
 
-            let aiName = displayText.name ?? "愛蜜莉雅"
-            // Append clean human-readable message without raw bracket tags
-            let textToShow = cleanedText.isEmpty ? text : cleanedText
-            let aiMessage = ChatMessage(sender: .ai, text: textToShow, name: aiName)
-            self.messages.append(aiMessage)
-        }
-
-        // 2. Action triggers fallback (expressions & motions)
-        if let actions = payload.actions {
-            if let expressions = actions.expressions, let firstExp = expressions.first, expressionName == nil {
-                expressionName = firstExp
-                self.onExpression?(firstExp)
-            }
-            if let motions = actions.motions, let firstMotion = motions.first, motionGroup == nil {
-                motionGroup = firstMotion
-                self.onMotion?(firstMotion)
+            let aiName = payload.display_text?.name ?? "愛蜜莉雅"
+            if !cleanedText.isEmpty {
+                let aiMessage = ChatMessage(sender: .ai, text: cleanedText, name: aiName)
+                self.messages.append(aiMessage)
             }
         }
 
-        // 3. Audio decoding for native lip sync & motion orchestration
+        // 2. Audio decoding: defer expression & multi-tag motion execution to exact chunk playback start!
         if let base64Audio = payload.audio,
+           !base64Audio.isEmpty,
            let audioBytes = Data(base64Encoded: base64Audio) {
             self.isAiThinkingOrSpeaking = true
-            self.onAudioReceived?(audioBytes, payload.display_text, payload.actions, motionGroup, expressionName, cleanedText)
+            self.onAudioReceived?(audioBytes, payload.display_text, payload.actions, rawText, expressionName, cleanedText)
+        } else {
+            // Silent text-only payload fallback
+            if let exp = expressionName {
+                self.onExpression?(exp)
+            }
+            if let motion = fallbackMotionGroup {
+                self.onMotion?(motion)
+            }
         }
     }
 
@@ -456,7 +469,10 @@ public final class ChatNetworkService: NSObject, ObservableObject, URLSessionWeb
             guard let role = item["role"] as? String,
                   let content = item["content"] as? String else { continue }
             let sender: MessageSender = (role == "human" || role == "user") ? .user : .ai
-            restored.append(ChatMessage(sender: sender, text: content))
+            let cleanContent = sender == .ai ? ChatNetworkService.parseTags(from: content).cleanText : content
+            if !cleanContent.isEmpty {
+                restored.append(ChatMessage(sender: sender, text: cleanContent))
+            }
         }
         if !restored.isEmpty {
             self.messages = restored
